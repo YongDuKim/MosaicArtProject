@@ -1,0 +1,75 @@
+:root {
+  --text: #3b3b40;
+  --text-sub: #6b6375;
+  --heading: #08060d;
+  --bg: #f7f6f3;
+  --card-bg: #ffffff;
+  --border: #e0dee4;
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-bg: rgba(124, 58, 237, 0.08);
+  --warning: #b45309;
+  --error: #b91c1c;
+  --shadow: rgba(0, 0, 0, 0.06) 0 4px 12px;
+
+  font: 16px/1.6 system-ui, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  color-scheme: light dark;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #d1d5db;
+    --text-sub: #9ca3af;
+    --heading: #f3f4f6;
+    --bg: #16171d;
+    --card-bg: #1f2028;
+    --border: #2e303a;
+    --accent: #a78bfa;
+    --accent-hover: #c4b5fd;
+    --accent-bg: rgba(167, 139, 250, 0.12);
+    --warning: #fbbf24;
+    --error: #f87171;
+    --shadow: rgba(0, 0, 0, 0.35) 0 4px 12px;
+  }
+}
+
+body {
+  margin: 0;
+}
+
+h1,
+h2 {
+  color: var(--heading);
+  font-weight: 600;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  color: #fff;
+  background: var(--accent);
+  transition: background-color 0.2s;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+code {
+  font-family: ui-monospace, Consolas, monospace;
+  background: var(--accent-bg);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--heading);
+}

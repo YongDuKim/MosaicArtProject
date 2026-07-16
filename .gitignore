@@ -1,0 +1,26 @@
+# dependencies / build
+node_modules/
+dist/
+
+# local-only files (personal photos, original python scripts, experiments)
+/tmp/
+
+# tooling
+.claude/
+skills-lock.json
+
+# logs
+logs
+*.log
+npm-debug.log*
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
