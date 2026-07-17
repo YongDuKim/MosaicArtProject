@@ -196,6 +196,23 @@
   color: var(--text-sub);
 }
 
+.tileset-note p {
+  margin: 0 0 6px;
+}
+
+.tileset-note-heading {
+  font-weight: 600;
+}
+
+.tileset-note ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.tileset-note li {
+  margin-bottom: 4px;
+}
+
 /* パラメータ */
 .params {
   display: flex;
