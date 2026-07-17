@@ -1,6 +1,8 @@
 /** タイル画像1枚の情報 (bitmap はセンタークロップ・縮小済みの正方形) */
 export interface TileInfo {
   name: string
+  /** 重複判定キー (ファイル名:サイズ)。同じ写真の再追加をスキップするために使う */
+  key: string
   avgColor: [number, number, number]
   bitmap: ImageBitmap
 }
@@ -71,3 +73,29 @@ export type WorkerResponse =
   | { type: 'progress'; percent: number; label?: string }
   | MosaicDone
   | { type: 'error'; message: string }
+
+/** タイルデコード Worker へのリクエスト */
+export interface TileWorkerRequest {
+  files: File[]
+  /** 同時デコード数 (モバイル判定はメインスレッド側でしかできないため、ここで渡す) */
+  concurrency: number
+}
+
+/**
+ * タイルデコード Worker からのレスポンス。
+ * タイルは1枚完了するごとに bitmap を transfer して返す (Worker 側のメモリを平坦に保ち、
+ * 途中でエラーが起きても処理済みのタイルを失わないため)。
+ */
+export type TileWorkerResponse =
+  | {
+      type: 'tile'
+      name: string
+      key: string
+      avgColor: [number, number, number]
+      bitmap: ImageBitmap
+      done: number
+      total: number
+    }
+  | { type: 'skipped'; name: string; done: number; total: number }
+  | { type: 'batch-done'; loaded: number; skipped: number; total: number }
+  | { type: 'batch-error'; message: string }

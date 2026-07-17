@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import type { MosaicDone, MosaicParams, TileInfo, WorkerRequest, WorkerResponse } from './lib/types'
+import type {
+  MosaicDone,
+  MosaicParams,
+  TileInfo,
+  TileWorkerRequest,
+  TileWorkerResponse,
+  WorkerRequest,
+  WorkerResponse,
+} from './lib/types'
 import { computePlan } from './lib/mosaic'
-import { loadTiles } from './lib/tiles'
+import { loadTiles, tileKey } from './lib/tiles'
 import ImageUploader from './components/ImageUploader'
 import ParamsPanel from './components/ParamsPanel'
 import TileSetPanel from './components/TileSetPanel'
@@ -23,13 +31,29 @@ interface Result extends MosaicDone {
 
 const DEFAULT_PARAMS: MosaicParams = { x: 5, n: 25, rotate: true, colorAdjust: 50 }
 
+/** 直近のタイル追加バッチの結果 (累計枚数は tiles.length が持つ) */
+export interface TilesMeta {
+  lastAdded: number
+  lastSkipped: number
+  lastDuplicates: number
+  skippedNames: string[]
+}
+
+/**
+ * 同時デコード数。スマートフォンはメモリが少なくフル稼働させると
+ * タブごと落ちることがあるため控えめにする。
+ * WorkerNavigator には maxTouchPoints がないためメインスレッドで判定する。
+ */
+function tileConcurrency(): number {
+  const nav = navigator as Navigator & { deviceMemory?: number }
+  const mobile = nav.maxTouchPoints > 1 || /iPhone|iPad|Android|Mobile/i.test(nav.userAgent)
+  if (mobile || (nav.deviceMemory !== undefined && nav.deviceMemory <= 4)) return 2
+  return Math.min(4, nav.hardwareConcurrency || 4)
+}
+
 export default function App() {
   const [tiles, setTiles] = useState<TileInfo[] | null>(null)
-  const [tilesMeta, setTilesMeta] = useState<{
-    count: number
-    skipped: number
-    total: number
-  } | null>(null)
+  const [tilesMeta, setTilesMeta] = useState<TilesMeta | null>(null)
   const [tileLoading, setTileLoading] = useState<{ done: number; total: number } | null>(null)
   const [input, setInput] = useState<InputImage | null>(null)
   const [params, setParams] = useState<MosaicParams>(DEFAULT_PARAMS)
@@ -40,8 +64,17 @@ export default function App() {
   const [selectedTile, setSelectedTile] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const workerRef = useRef<Worker | null>(null)
+  const tileWorkerRef = useRef<Worker | null>(null)
+  /** ストリーミング中のタイル置き場。1枚ごとの再レンダリングを避けるため ref に溜める */
+  const pendingTilesRef = useRef<TileInfo[]>([])
 
-  useEffect(() => () => workerRef.current?.terminate(), [])
+  useEffect(
+    () => () => {
+      workerRef.current?.terminate()
+      tileWorkerRef.current?.terminate()
+    },
+    [],
+  )
 
   const plan = useMemo(
     () =>
@@ -65,28 +98,124 @@ export default function App() {
     }
   }
 
-  const handleTileUpload = async (files: File[]) => {
+  const handleTileUpload = (files: File[]) => {
     if (tileLoading || generating) return
-    setTileLoading({ done: 0, total: files.length })
     setError(null)
-    try {
-      const { tiles: loaded, skipped, total } = await loadTiles(files, (done, t) =>
-        setTileLoading({ done, total: t }),
-      )
-      if (loaded.length === 0) {
+
+    // 追加式のため、既存タイルとバッチ内の重複を先に除外する
+    const knownKeys = new Set(tiles?.map((t) => t.key))
+    const fresh: File[] = []
+    let duplicates = 0
+    for (const file of files) {
+      const key = tileKey(file)
+      if (knownKeys.has(key)) {
+        duplicates++
+      } else {
+        knownKeys.add(key)
+        fresh.push(file)
+      }
+    }
+
+    if (fresh.length === 0) {
+      setTilesMeta({ lastAdded: 0, lastSkipped: 0, lastDuplicates: duplicates, skippedNames: [] })
+      return
+    }
+
+    setTileLoading({ done: 0, total: fresh.length })
+    pendingTilesRef.current = []
+    const skippedNames: string[] = []
+
+    const appendPending = () => {
+      const pending = pendingTilesRef.current
+      pendingTilesRef.current = []
+      if (pending.length > 0) setTiles((prev) => [...(prev ?? []), ...pending])
+    }
+
+    const finish = (loaded: number, skipped: number) => {
+      appendPending()
+      setTilesMeta({
+        lastAdded: loaded,
+        lastSkipped: skipped,
+        lastDuplicates: duplicates,
+        skippedNames,
+      })
+      if (loaded === 0 && skipped > 0) {
         setError(
           'タイル画像を1枚も読み込めませんでした。対応形式 (JPEG/PNG など) か確認してください。',
         )
-        return
       }
-      setTiles((prev) => {
-        prev?.forEach((t) => t.bitmap.close())
-        return loaded
-      })
-      setTilesMeta({ count: loaded.length, skipped, total })
-    } finally {
       setTileLoading(null)
     }
+
+    const fail = () => {
+      // 途中まで届いたタイルは失わずに追加する
+      const loaded = pendingTilesRef.current.length
+      appendPending()
+      setTilesMeta({
+        lastAdded: loaded,
+        lastSkipped: skippedNames.length,
+        lastDuplicates: duplicates,
+        skippedNames,
+      })
+      setError('タイルの読み込み中にエラーが発生しました。枚数を減らして再度お試しください。')
+      setTileLoading(null)
+    }
+
+    let tileWorker = tileWorkerRef.current
+    if (!tileWorker) {
+      try {
+        tileWorker = new Worker(new URL('./workers/tileWorker.ts', import.meta.url), {
+          type: 'module',
+        })
+        tileWorkerRef.current = tileWorker
+      } catch {
+        tileWorker = null
+      }
+    }
+
+    if (!tileWorker) {
+      // Worker を生成できない環境向けフォールバック (追加式は維持)
+      loadTiles(fresh, tileConcurrency(), (done, total) => setTileLoading({ done, total }))
+        .then(({ tiles: loaded, skipped }) => {
+          pendingTilesRef.current = loaded
+          skippedNames.push(...skipped)
+          finish(loaded.length, skipped.length)
+        })
+        .catch(fail)
+      return
+    }
+
+    tileWorker.onmessage = (event: MessageEvent<TileWorkerResponse>) => {
+      const msg = event.data
+      if (msg.type === 'tile') {
+        pendingTilesRef.current.push({
+          name: msg.name,
+          key: msg.key,
+          avgColor: msg.avgColor,
+          bitmap: msg.bitmap,
+        })
+        setTileLoading({ done: msg.done, total: msg.total })
+      } else if (msg.type === 'skipped') {
+        skippedNames.push(msg.name)
+        setTileLoading({ done: msg.done, total: msg.total })
+      } else if (msg.type === 'batch-done') {
+        finish(msg.loaded, msg.skipped)
+      } else {
+        fail()
+      }
+    }
+    tileWorker.onerror = fail
+    const request: TileWorkerRequest = { files: fresh, concurrency: tileConcurrency() }
+    tileWorker.postMessage(request)
+  }
+
+  const handleClearTiles = () => {
+    if (tileLoading || generating) return
+    setTiles((prev) => {
+      prev?.forEach((t) => t.bitmap.close())
+      return null
+    })
+    setTilesMeta(null)
   }
 
   const handleGenerate = () => {
@@ -158,10 +287,12 @@ export default function App() {
           disabled={generating}
         />
         <TileSetPanel
+          tileCount={tiles?.length ?? 0}
           tilesMeta={tilesMeta}
           loading={tileLoading}
           disabled={generating}
           onUploadFiles={handleTileUpload}
+          onClearAll={handleClearTiles}
         />
         <ParamsPanel
           params={params}

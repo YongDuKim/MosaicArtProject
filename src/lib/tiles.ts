@@ -5,6 +5,42 @@ import { averageColorOfBitmap } from './colorUtils'
 const TILE_SIZE = 256
 
 /**
+ * デコード時に縮小する目標幅。最終縮小は自前の高品質描画で仕上げるため、
+ * TILE_SIZE の2倍を確保してエンジン側 resize の品質差を吸収する。
+ */
+const DECODE_TARGET = TILE_SIZE * 2
+
+/** タイルの重複判定キー。iOS のピッカーは再選択のたびに再変換して lastModified が変わるため、名前とサイズのみで判定する */
+export const tileKey = (file: File) => `${file.name}:${file.size}`
+
+/**
+ * デコード時に縮小してビットマップを得る。
+ * 12MP 級の写真をフル解像度でデコードするとメモリを大きく消費し、
+ * スマートフォンではクラッシュや極端な低速化の原因になるため。
+ * resize オプション未対応のエンジンではフル解像度デコードにフォールバックする
+ * (cropToSquareTile が任意サイズを正規化するので結果は同じ)。
+ */
+async function decodeReduced(blob: Blob): Promise<ImageBitmap> {
+  try {
+    let bitmap = await createImageBitmap(blob, {
+      resizeWidth: DECODE_TARGET,
+      resizeQuality: 'high',
+    })
+    // 横長パノラマ等で短辺 (高さ) がタイルサイズを下回った場合は高さ基準で取り直す
+    if (bitmap.height < TILE_SIZE) {
+      bitmap.close()
+      bitmap = await createImageBitmap(blob, {
+        resizeHeight: DECODE_TARGET,
+        resizeQuality: 'high',
+      })
+    }
+    return bitmap
+  } catch {
+    return createImageBitmap(blob)
+  }
+}
+
+/**
  * 中央の正方形を切り抜いて TILE_SIZE px に縮小する。
  * アスペクト比の違う写真を歪ませず、フル解像度のビットマップを保持しないための前処理。
  */
@@ -41,52 +77,85 @@ async function cropToSquareTile(source: ImageBitmap): Promise<ImageBitmap> {
   return createImageBitmap(canvas)
 }
 
-async function toTileInfo(name: string, blob: Blob): Promise<TileInfo> {
-  const full = await createImageBitmap(blob)
+async function toTileInfo(file: File): Promise<TileInfo> {
+  const reduced = await decodeReduced(file)
   try {
-    const bitmap = await cropToSquareTile(full)
-    return { name, avgColor: averageColorOfBitmap(bitmap), bitmap }
+    const bitmap = await cropToSquareTile(reduced)
+    return { name: file.name, key: tileKey(file), avgColor: averageColorOfBitmap(bitmap), bitmap }
   } finally {
-    full.close()
+    reduced.close()
   }
+}
+
+/** タイル読み込みの進行コールバック */
+export interface TileLoadCallbacks {
+  onTile: (tile: TileInfo, done: number, total: number) => void
+  onSkip: (name: string, done: number, total: number) => void
 }
 
 /** タイルセットの読み込み結果 */
 export interface TilesLoadResult {
-  tiles: TileInfo[]
+  loaded: number
   /** デコードできずスキップしたファイル数 (HEIC・動画・破損ファイルなど) */
   skipped: number
   total: number
 }
 
 /**
- * ユーザーが選択したファイル群からタイルセットを作る。
- * 読めないファイルはスキップして続行し、skipped で件数を返す。
+ * ファイル群をタイルへ変換し、1枚完了するごとにコールバックへ流す。
+ * 読めないファイルはスキップして続行する。
  */
-export async function loadTiles(
+export async function loadTilesStreaming(
   files: File[],
-  onProgress?: (done: number, total: number) => void,
+  concurrency: number,
+  callbacks: TileLoadCallbacks,
 ): Promise<TilesLoadResult> {
   const total = files.length
   const queue = [...files]
-  const tiles: TileInfo[] = []
   let done = 0
+  let loaded = 0
   let skipped = 0
 
   // 数百枚のデコードを直列にすると遅いため、少数並列で処理する
-  const workers = Array.from({ length: Math.min(4, queue.length) }, async () => {
+  const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
     for (let file = queue.shift(); file; file = queue.shift()) {
       try {
-        tiles.push(await toTileInfo(file.name, file))
+        const tile = await toTileInfo(file)
+        done++
+        loaded++
+        callbacks.onTile(tile, done, total)
       } catch {
+        done++
         skipped++
+        callbacks.onSkip(file.name, done, total)
       }
-      done++
-      onProgress?.(done, total)
     }
   })
   await Promise.all(workers)
 
-  tiles.sort((a, b) => a.name.localeCompare(b.name))
-  return { tiles, skipped, total }
+  return { loaded, skipped, total }
+}
+
+/**
+ * メインスレッド用フォールバック: Worker が生成できない環境で
+ * ファイル群からタイル配列を作る。
+ */
+export async function loadTiles(
+  files: File[],
+  concurrency: number,
+  onProgress?: (done: number, total: number) => void,
+): Promise<{ tiles: TileInfo[]; skipped: string[]; total: number }> {
+  const tiles: TileInfo[] = []
+  const skipped: string[] = []
+  await loadTilesStreaming(files, concurrency, {
+    onTile: (tile, done, total) => {
+      tiles.push(tile)
+      onProgress?.(done, total)
+    },
+    onSkip: (name, done, total) => {
+      skipped.push(name)
+      onProgress?.(done, total)
+    },
+  })
+  return { tiles, skipped, total: files.length }
 }
