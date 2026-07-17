@@ -1,27 +1,43 @@
 import type { MosaicDone, MosaicPlan, WorkerRequest } from './types'
 import { findClosestColorIndex } from './colorUtils'
 
-/** ブラウザの canvas 1辺の実用上限に合わせた出力1辺の最大値 */
+/** ブラウザの canvas 1辺の実用上限に合わせた出力1辺の最大値 (デスクトップ) */
 export const MAX_OUTPUT_DIM = 16384
+
+/**
+ * モバイル端末での出力1辺の最大値。
+ * iOS の WebKit は canvas の面積上限が小さく (実用上 4096×4096 程度)、
+ * 超えると drawImage / convertToBlob が InvalidStateError を投げる。
+ */
+export const MOBILE_MAX_OUTPUT_DIM = 4096
+
+/** 実行中の端末に応じた出力1辺の上限を返す */
+export function deviceMaxOutputDim(): number {
+  if (typeof navigator === 'undefined') return MAX_OUTPUT_DIM
+  const mobile =
+    navigator.maxTouchPoints > 1 || /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent)
+  return mobile ? MOBILE_MAX_OUTPUT_DIM : MAX_OUTPUT_DIM
+}
 
 /**
  * 出力レイアウトを計算する。
  * grid = 入力サイズ / x、出力 = grid × n (mosaic_art_mk5.py と同じ)。
- * 出力が MAX_OUTPUT_DIM を超える場合はタイル解像度 n を自動縮小する。
+ * 出力が maxDim を超える場合はタイル解像度 n を自動縮小する。
  */
 export function computePlan(
   imageWidth: number,
   imageHeight: number,
   x: number,
   n: number,
+  maxDim = deviceMaxOutputDim(),
 ): MosaicPlan {
   const gridWidth = Math.max(1, Math.floor(imageWidth / x))
   const gridHeight = Math.max(1, Math.floor(imageHeight / x))
   const maxGrid = Math.max(gridWidth, gridHeight)
   let effectiveN = n
   let capped = false
-  if (maxGrid * n > MAX_OUTPUT_DIM) {
-    effectiveN = Math.max(1, Math.floor(MAX_OUTPUT_DIM / maxGrid))
+  if (maxGrid * n > maxDim) {
+    effectiveN = Math.max(1, Math.floor(maxDim / maxGrid))
     capped = true
   }
   return {
@@ -31,6 +47,7 @@ export function computePlan(
     outputWidth: gridWidth * effectiveN,
     outputHeight: gridHeight * effectiveN,
     capped,
+    maxDim,
   }
 }
 

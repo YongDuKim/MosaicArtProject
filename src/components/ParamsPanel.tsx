@@ -1,5 +1,4 @@
 import type { MosaicParams, MosaicPlan } from '../lib/types'
-import { MAX_OUTPUT_DIM } from '../lib/mosaic'
 
 interface Props {
   params: MosaicParams
@@ -90,7 +89,7 @@ export default function ParamsPanel({
           </p>
           {plan.capped && (
             <p className="warning">
-              出力サイズが上限 ({MAX_OUTPUT_DIM.toLocaleString()}px) を超えるため、タイル解像度を
+              出力サイズがこの端末の上限 ({plan.maxDim.toLocaleString()}px) を超えるため、タイル解像度を
               n = {params.n} → {plan.effectiveN} に自動調整します。タイルを鮮明にしたい場合は
               グリッド解像度 x を大きくしてください
             </p>

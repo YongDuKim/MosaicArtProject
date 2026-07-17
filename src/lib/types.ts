@@ -36,6 +36,8 @@ export interface MosaicPlan {
   outputHeight: number
   /** 上限ガードが働いたか */
   capped: boolean
+  /** この計算に使った出力1辺の上限 (端末により異なる) */
+  maxDim: number
 }
 
 /** Worker へのリクエスト */

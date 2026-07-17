@@ -51,6 +51,14 @@ function tileConcurrency(): number {
   return Math.min(4, nav.hardwareConcurrency || 4)
 }
 
+/** 生成失敗時のメッセージ。WebKit の canvas 上限超過エラーには対処法を添える */
+function describeGenerateError(message: string): string {
+  if (/invalid state|out of memory/i.test(message)) {
+    return `生成に失敗しました: ${message} — 端末のメモリまたはキャンバス上限を超えた可能性があります。グリッド解像度 x を大きくするか、タイル解像度 n を小さくしてお試しください。`
+  }
+  return `生成に失敗しました: ${message}`
+}
+
 export default function App() {
   const [tiles, setTiles] = useState<TileInfo[] | null>(null)
   const [tilesMeta, setTilesMeta] = useState<TilesMeta | null>(null)
@@ -246,12 +254,12 @@ export default function App() {
         setSelectedTile(null)
         setGenerating(false)
       } else {
-        setError(`生成に失敗しました: ${msg.message}`)
+        setError(describeGenerateError(msg.message))
         setGenerating(false)
       }
     }
     worker.onerror = (event) => {
-      setError(`生成に失敗しました: ${event.message}`)
+      setError(describeGenerateError(event.message))
       setGenerating(false)
     }
 
