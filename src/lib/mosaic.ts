@@ -65,6 +65,8 @@ export async function generateMosaic(
   smallCtx.imageSmoothingQuality = 'high'
   smallCtx.drawImage(input, 0, 0, gridWidth, gridHeight)
   const cellData = smallCtx.getImageData(0, 0, gridWidth, gridHeight).data
+  // transfer されたコピーなので、読み終わったら即座に解放してメモリを抑える
+  input.close()
 
   // タイルを n×n に事前リサイズし、色シフト用にピクセル配列も保持する
   const tileCanvases: OffscreenCanvas[] = []
@@ -79,6 +81,7 @@ export async function generateMosaic(
     if (colorAdjust > 0) {
       tilePixels.push(ctx.getImageData(0, 0, n, n).data)
     }
+    tile.bitmap.close()
   }
   const avgColors = tiles.map((tile) => tile.avgColor)
 

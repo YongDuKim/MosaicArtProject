@@ -1,5 +1,10 @@
 import type { MosaicDone } from './types'
 
+/** 使用割合の表示用フォーマット。toPrecision(2) が 100 を "1.0e+2" にするのを避ける */
+export function formatPercent(percentage: number): string {
+  return Number(percentage.toPrecision(2)).toString()
+}
+
 /** ファイル名用タイムスタンプ (Python版と同じ YYYYMMDD_HHMMSS 形式) */
 export function formatTimestamp(date = new Date()): string {
   const pad = (v: number) => String(v).padStart(2, '0')
@@ -17,7 +22,7 @@ export function buildStatsText(result: MosaicDone, inputName: string): string {
   lines.push(`処理日時: ${new Date().toLocaleString('ja-JP')}`)
   lines.push('')
   for (const stat of result.stats) {
-    lines.push(`${stat.name}: ${stat.count}回 (${stat.percentage.toPrecision(2)}%)`)
+    lines.push(`${stat.name}: ${stat.count}回 (${formatPercent(stat.percentage)}%)`)
   }
   lines.push('')
   lines.push(`使用されたプリセット画像の種類: ${result.usedTileKinds} / ${result.tileKindsTotal}`)

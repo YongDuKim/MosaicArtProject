@@ -226,7 +226,7 @@ export default function App() {
     setTilesMeta(null)
   }
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!tiles || !input || !plan || generating || tileLoading) return
     setGenerating(true)
     setProgress(0)
@@ -263,16 +263,26 @@ export default function App() {
       setGenerating(false)
     }
 
-    const request: WorkerRequest = {
-      input: input.bitmap,
-      tiles: tiles.map((t) => ({ name: t.name, avgColor: t.avgColor, bitmap: t.bitmap })),
-      gridWidth: plan.gridWidth,
-      gridHeight: plan.gridHeight,
-      n: plan.effectiveN,
-      rotate: params.rotate,
-      colorAdjust: params.colorAdjust / 100,
+    try {
+      // iOS の WebKit は ImageBitmap を structured clone で Worker に渡すと中身が
+      // 空になる不具合があるため、使い捨てのコピーを作って transfer で渡す。
+      // 元の bitmap は手元に残るので、再生成にも影響しない。
+      const inputCopy = await createImageBitmap(input.bitmap)
+      const tileCopies = await Promise.all(tiles.map((t) => createImageBitmap(t.bitmap)))
+      const request: WorkerRequest = {
+        input: inputCopy,
+        tiles: tiles.map((t, i) => ({ name: t.name, avgColor: t.avgColor, bitmap: tileCopies[i] })),
+        gridWidth: plan.gridWidth,
+        gridHeight: plan.gridHeight,
+        n: plan.effectiveN,
+        rotate: params.rotate,
+        colorAdjust: params.colorAdjust / 100,
+      }
+      worker.postMessage(request, [inputCopy, ...tileCopies])
+    } catch (err) {
+      setError(describeGenerateError(err instanceof Error ? err.message : String(err)))
+      setGenerating(false)
     }
-    worker.postMessage(request)
   }
 
   return (

@@ -1,5 +1,5 @@
 import type { MosaicDone } from '../lib/types'
-import { buildStatsText, downloadBlob, formatTimestamp } from '../lib/format'
+import { buildStatsText, downloadBlob, formatPercent, formatTimestamp } from '../lib/format'
 
 interface Props {
   result: MosaicDone
@@ -44,7 +44,7 @@ export default function StatsTable({ result, inputName, selectedTile, onSelectTi
               >
                 <td>{stat.name}</td>
                 <td>{stat.count.toLocaleString()}</td>
-                <td>{stat.percentage.toPrecision(2)}%</td>
+                <td>{formatPercent(stat.percentage)}%</td>
               </tr>
             ))}
           </tbody>
