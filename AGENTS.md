@@ -55,4 +55,4 @@ npm run build
 ## Commit Message
 
 コミットメッセージはConventional Commits に従い、英語で簡潔に書くこと。
-例: `fix: transfer ImageBitmap to worker to avoid empty output on iOS`
+例: `fix: correct typo in error message`
