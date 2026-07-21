@@ -4,6 +4,8 @@
 
 公開ページ: https://yongdukim.github.io/MosaicArtProject/
 
+詳細ドキュメント: [使い方](docs/user/usage.md) / [アーキテクチャ](docs/internal/architecture.md) / [アルゴリズム](docs/internal/algorithm.md)
+
 ## 使い方
 
 1. モザイク化したい元画像をアップロード
