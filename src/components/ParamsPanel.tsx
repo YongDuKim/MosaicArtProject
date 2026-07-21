@@ -1,12 +1,12 @@
-import type { MosaicParams, MosaicPlan } from '../lib/types'
+import type { MosaicParams, MosaicPlan } from "../lib/types";
 
 interface Props {
-  params: MosaicParams
-  onChange: (params: MosaicParams) => void
-  plan: MosaicPlan | null
-  canGenerate: boolean
-  generating: boolean
-  onGenerate: () => void
+  params: MosaicParams;
+  onChange: (params: MosaicParams) => void;
+  plan: MosaicPlan | null;
+  canGenerate: boolean;
+  generating: boolean;
+  onGenerate: () => void;
 }
 
 export default function ParamsPanel({
@@ -63,7 +63,9 @@ export default function ParamsPanel({
           step={5}
           value={params.colorAdjust}
           disabled={generating}
-          onChange={(e) => onChange({ ...params, colorAdjust: Number(e.target.value) })}
+          onChange={(e) =>
+            onChange({ ...params, colorAdjust: Number(e.target.value) })
+          }
         />
       </label>
 
@@ -80,18 +82,19 @@ export default function ParamsPanel({
       {plan && (
         <div className="plan-info">
           <p>
-            グリッド: {plan.gridWidth} × {plan.gridHeight} (総タイル数{' '}
+            グリッド: {plan.gridWidth} × {plan.gridHeight} (総タイル数{" "}
             {(plan.gridWidth * plan.gridHeight).toLocaleString()})
           </p>
           <p>
-            出力サイズ: {plan.outputWidth.toLocaleString()} ×{' '}
+            出力サイズ: {plan.outputWidth.toLocaleString()} ×{" "}
             {plan.outputHeight.toLocaleString()} px
           </p>
           {plan.capped && (
             <p className="warning">
-              出力サイズがこの端末の上限 ({plan.maxDim.toLocaleString()}px) を超えるため、タイル解像度を
-              n = {params.n} → {plan.effectiveN} に自動調整します。タイルを鮮明にしたい場合は
-              グリッド解像度 x を大きくしてください
+              出力サイズがこの端末の上限 ({plan.maxDim.toLocaleString()}px)
+              を超えるため、タイル解像度を n = {params.n} → {plan.effectiveN}{" "}
+              に自動調整します。タイルを鮮明にしたい場合は グリッド解像度 x
+              を大きくしてください
             </p>
           )}
         </div>
@@ -103,8 +106,8 @@ export default function ParamsPanel({
         disabled={!canGenerate || generating}
         onClick={onGenerate}
       >
-        {generating ? '生成中…' : 'モザイクアートを生成'}
+        {generating ? "生成中…" : "モザイクアートを生成"}
       </button>
     </div>
-  )
+  );
 }
