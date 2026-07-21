@@ -1,7 +1,7 @@
 interface Props {
-  percent: number
+  percent: number;
   /** パーセント表示の代わりに出す段階ラベル (例: PNGエンコード中…) */
-  label?: string | null
+  label?: string | null;
 }
 
 export default function ProgressBar({ percent, label }: Props) {
@@ -12,5 +12,5 @@ export default function ProgressBar({ percent, label }: Props) {
       </div>
       <span className="progress-label">{label ?? `${percent}%`}</span>
     </div>
-  )
+  );
 }

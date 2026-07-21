@@ -1,51 +1,57 @@
-import { useRef, useState } from 'react'
-import type { DragEvent, ChangeEvent } from 'react'
+import { useRef, useState } from "react";
+import type { DragEvent, ChangeEvent } from "react";
 
 interface Props {
-  onSelect: (file: File) => void
-  previewUrl: string | null
-  fileName: string | null
-  disabled?: boolean
+  onSelect: (file: File) => void;
+  previewUrl: string | null;
+  fileName: string | null;
+  disabled?: boolean;
 }
 
-export default function ImageUploader({ onSelect, previewUrl, fileName, disabled }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [dragging, setDragging] = useState(false)
+export default function ImageUploader({
+  onSelect,
+  previewUrl,
+  fileName,
+  disabled,
+}: Props) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
 
   const handleFiles = (files: FileList | null) => {
-    const file = files?.[0]
-    if (file && file.type.startsWith('image/')) {
-      onSelect(file)
+    const file = files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      onSelect(file);
     }
-  }
+  };
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setDragging(false)
-    if (!disabled) handleFiles(e.dataTransfer.files)
-  }
+    e.preventDefault();
+    setDragging(false);
+    if (!disabled) handleFiles(e.dataTransfer.files);
+  };
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    handleFiles(e.target.files)
-    e.target.value = ''
-  }
+    handleFiles(e.target.files);
+    e.target.value = "";
+  };
 
   return (
     <div
-      className={`uploader${dragging ? ' dragging' : ''}${disabled ? ' disabled' : ''}`}
+      className={`uploader${dragging ? " dragging" : ""}${disabled ? " disabled" : ""}`}
       onDragOver={(e) => {
-        e.preventDefault()
-        if (!disabled) setDragging(true)
+        e.preventDefault();
+        if (!disabled) setDragging(true);
       }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
       onClick={() => {
-        if (!disabled) inputRef.current?.click()
+        if (!disabled) inputRef.current?.click();
       }}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && !disabled) inputRef.current?.click()
+        if ((e.key === "Enter" || e.key === " ") && !disabled)
+          inputRef.current?.click();
       }}
     >
       <input
@@ -69,5 +75,5 @@ export default function ImageUploader({ onSelect, previewUrl, fileName, disabled
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -12,7 +12,12 @@
   --error: #b91c1c;
   --shadow: rgba(0, 0, 0, 0.06) 0 4px 12px;
 
-  font: 16px/1.6 system-ui, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  font:
+    16px/1.6 system-ui,
+    "Segoe UI",
+    "Hiragino Sans",
+    "Noto Sans JP",
+    sans-serif;
   color: var(--text);
   background: var(--bg);
   color-scheme: light dark;

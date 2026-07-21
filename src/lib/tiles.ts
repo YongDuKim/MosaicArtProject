@@ -1,17 +1,17 @@
-import type { TileInfo } from './types'
-import { averageColorOfBitmap } from './colorUtils'
+import type { TileInfo } from "./types";
+import { averageColorOfBitmap } from "./colorUtils";
 
 /** タイルとして保持する正方形ビットマップの1辺 (n の最大値 128 の2倍の品質余裕) */
-const TILE_SIZE = 256
+const TILE_SIZE = 256;
 
 /**
  * デコード時に縮小する目標幅。最終縮小は自前の高品質描画で仕上げるため、
  * TILE_SIZE の2倍を確保してエンジン側 resize の品質差を吸収する。
  */
-const DECODE_TARGET = TILE_SIZE * 2
+const DECODE_TARGET = TILE_SIZE * 2;
 
 /** タイルの重複判定キー。iOS のピッカーは再選択のたびに再変換して lastModified が変わるため、名前とサイズのみで判定する */
-export const tileKey = (file: File) => `${file.name}:${file.size}`
+export const tileKey = (file: File) => `${file.name}:${file.size}`;
 
 /**
  * デコード時に縮小してビットマップを得る。
@@ -24,19 +24,19 @@ async function decodeReduced(blob: Blob): Promise<ImageBitmap> {
   try {
     let bitmap = await createImageBitmap(blob, {
       resizeWidth: DECODE_TARGET,
-      resizeQuality: 'high',
-    })
+      resizeQuality: "high",
+    });
     // 横長パノラマ等で短辺 (高さ) がタイルサイズを下回った場合は高さ基準で取り直す
     if (bitmap.height < TILE_SIZE) {
-      bitmap.close()
+      bitmap.close();
       bitmap = await createImageBitmap(blob, {
         resizeHeight: DECODE_TARGET,
-        resizeQuality: 'high',
-      })
+        resizeQuality: "high",
+      });
     }
-    return bitmap
+    return bitmap;
   } catch {
-    return createImageBitmap(blob)
+    return createImageBitmap(blob);
   }
 }
 
@@ -45,60 +45,85 @@ async function decodeReduced(blob: Blob): Promise<ImageBitmap> {
  * アスペクト比の違う写真を歪ませず、フル解像度のビットマップを保持しないための前処理。
  */
 async function cropToSquareTile(source: ImageBitmap): Promise<ImageBitmap> {
-  const side = Math.min(source.width, source.height)
-  const sx = (source.width - side) / 2
-  const sy = (source.height - side) / 2
-  const size = Math.min(TILE_SIZE, side)
+  const side = Math.min(source.width, source.height);
+  const sx = (source.width - side) / 2;
+  const sy = (source.height - side) / 2;
+  const size = Math.min(TILE_SIZE, side);
 
   // 高解像度写真を一気に縮小するとエイリアシングで細部が潰れるため、
   // 目標の2倍を超える間は1/2ずつ段階的に縮小してから最終サイズへ描画する
-  let current: OffscreenCanvas | ImageBitmap = source
-  let currentSide = side
-  let cropX = sx
-  let cropY = sy
+  let current: OffscreenCanvas | ImageBitmap = source;
+  let currentSide = side;
+  let cropX = sx;
+  let cropY = sy;
   while (currentSide > size * 2) {
-    const half = Math.ceil(currentSide / 2)
-    const halfCanvas = new OffscreenCanvas(half, half)
-    const halfCtx = halfCanvas.getContext('2d')
-    if (!halfCtx) throw new Error('2Dコンテキストを取得できませんでした')
-    halfCtx.imageSmoothingQuality = 'high'
-    halfCtx.drawImage(current, cropX, cropY, currentSide, currentSide, 0, 0, half, half)
-    current = halfCanvas
-    currentSide = half
-    cropX = 0
-    cropY = 0
+    const half = Math.ceil(currentSide / 2);
+    const halfCanvas = new OffscreenCanvas(half, half);
+    const halfCtx = halfCanvas.getContext("2d");
+    if (!halfCtx) throw new Error("2Dコンテキストを取得できませんでした");
+    halfCtx.imageSmoothingQuality = "high";
+    halfCtx.drawImage(
+      current,
+      cropX,
+      cropY,
+      currentSide,
+      currentSide,
+      0,
+      0,
+      half,
+      half,
+    );
+    current = halfCanvas;
+    currentSide = half;
+    cropX = 0;
+    cropY = 0;
   }
 
-  const canvas = new OffscreenCanvas(size, size)
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('2Dコンテキストを取得できませんでした')
-  ctx.imageSmoothingQuality = 'high'
-  ctx.drawImage(current, cropX, cropY, currentSide, currentSide, 0, 0, size, size)
-  return createImageBitmap(canvas)
+  const canvas = new OffscreenCanvas(size, size);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2Dコンテキストを取得できませんでした");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(
+    current,
+    cropX,
+    cropY,
+    currentSide,
+    currentSide,
+    0,
+    0,
+    size,
+    size,
+  );
+  return createImageBitmap(canvas);
 }
 
 async function toTileInfo(file: File): Promise<TileInfo> {
-  const reduced = await decodeReduced(file)
+  const reduced = await decodeReduced(file);
   try {
-    const bitmap = await cropToSquareTile(reduced)
-    return { name: file.name, key: tileKey(file), avgColor: averageColorOfBitmap(bitmap), bitmap }
+    const bitmap = await cropToSquareTile(reduced);
+    return {
+      name: file.name,
+      key: tileKey(file),
+      avgColor: averageColorOfBitmap(bitmap),
+      bitmap,
+    };
   } finally {
-    reduced.close()
+    reduced.close();
   }
 }
 
 /** タイル読み込みの進行コールバック */
 export interface TileLoadCallbacks {
-  onTile: (tile: TileInfo, done: number, total: number) => void
-  onSkip: (name: string, done: number, total: number) => void
+  onTile: (tile: TileInfo, done: number, total: number) => void;
+  onSkip: (name: string, done: number, total: number) => void;
 }
 
 /** タイルセットの読み込み結果 */
 export interface TilesLoadResult {
-  loaded: number
+  loaded: number;
   /** デコードできずスキップしたファイル数 (HEIC・動画・破損ファイルなど) */
-  skipped: number
-  total: number
+  skipped: number;
+  total: number;
 }
 
 /**
@@ -110,30 +135,33 @@ export async function loadTilesStreaming(
   concurrency: number,
   callbacks: TileLoadCallbacks,
 ): Promise<TilesLoadResult> {
-  const total = files.length
-  const queue = [...files]
-  let done = 0
-  let loaded = 0
-  let skipped = 0
+  const total = files.length;
+  const queue = [...files];
+  let done = 0;
+  let loaded = 0;
+  let skipped = 0;
 
   // 数百枚のデコードを直列にすると遅いため、少数並列で処理する
-  const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
-    for (let file = queue.shift(); file; file = queue.shift()) {
-      try {
-        const tile = await toTileInfo(file)
-        done++
-        loaded++
-        callbacks.onTile(tile, done, total)
-      } catch {
-        done++
-        skipped++
-        callbacks.onSkip(file.name, done, total)
+  const workers = Array.from(
+    { length: Math.min(concurrency, queue.length) },
+    async () => {
+      for (let file = queue.shift(); file; file = queue.shift()) {
+        try {
+          const tile = await toTileInfo(file);
+          done++;
+          loaded++;
+          callbacks.onTile(tile, done, total);
+        } catch {
+          done++;
+          skipped++;
+          callbacks.onSkip(file.name, done, total);
+        }
       }
-    }
-  })
-  await Promise.all(workers)
+    },
+  );
+  await Promise.all(workers);
 
-  return { loaded, skipped, total }
+  return { loaded, skipped, total };
 }
 
 /**
@@ -145,17 +173,17 @@ export async function loadTiles(
   concurrency: number,
   onProgress?: (done: number, total: number) => void,
 ): Promise<{ tiles: TileInfo[]; skipped: string[]; total: number }> {
-  const tiles: TileInfo[] = []
-  const skipped: string[] = []
+  const tiles: TileInfo[] = [];
+  const skipped: string[] = [];
   await loadTilesStreaming(files, concurrency, {
     onTile: (tile, done, total) => {
-      tiles.push(tile)
-      onProgress?.(done, total)
+      tiles.push(tile);
+      onProgress?.(done, total);
     },
     onSkip: (name, done, total) => {
-      skipped.push(name)
-      onProgress?.(done, total)
+      skipped.push(name);
+      onProgress?.(done, total);
     },
-  })
-  return { tiles, skipped, total: files.length }
+  });
+  return { tiles, skipped, total: files.length };
 }
