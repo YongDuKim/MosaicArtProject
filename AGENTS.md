@@ -8,15 +8,16 @@ Vite + React + TypeScript 製。
 ```bash
 npm install
 npm run dev
-npm run build
+npm run format
 npm run lint
+npm run build
 ```
 
 テストは存在しない。
 
 ## Validation
 
-- 完了前に必ず `npm run build` と `npm run lint` が通ることを確認すること。
+- 完了前に必ず `npm run format`・`npm run lint`・`npm run build`が通ることを確認すること。
 - ビルドが通っても実行時にのみ現れる不具合が多いため、コード変更では `npm run dev` でブラウザでの動作確認まで行うこと。ブラウザを操作できない環境では、その旨を報告してユーザーに動作確認を依頼すること。
 - iOS Safari 固有の挙動はローカルでは検証できないため、iOS 固有の影響が疑われる変更では、ブラウザ確認の可否にかかわらず、その旨を報告してユーザーに実機確認を依頼すること。
 
