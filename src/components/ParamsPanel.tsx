@@ -29,7 +29,7 @@ export default function ParamsPanel({
         <input
           type="range"
           min={1}
-          max={20}
+          max={128}
           value={params.x}
           disabled={generating}
           onChange={(e) => onChange({ ...params, x: Number(e.target.value) })}
