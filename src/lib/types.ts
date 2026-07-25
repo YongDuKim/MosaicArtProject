@@ -22,6 +22,8 @@ export interface MosaicParams {
 /** タイル使用統計 (1タイル分) */
 export interface UsageStat {
   name: string;
+  /** 生成時のタイルインデックス (tileNames と対応)。サムネイル取得に使う */
+  index: number;
   count: number;
   percentage: number;
 }

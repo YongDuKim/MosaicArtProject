@@ -388,6 +388,25 @@
   font-variant-numeric: tabular-nums;
 }
 
+.tile-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tile-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  background: var(--accent-bg);
+}
+
+.tile-name {
+  word-break: break-all;
+}
+
 .stats thead th {
   position: sticky;
   top: 0;

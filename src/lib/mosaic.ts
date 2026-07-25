@@ -158,6 +158,7 @@ export async function generateMosaic(
   const stats = tiles
     .map((tile, i) => ({
       name: tile.name,
+      index: i,
       count: counts[i],
       percentage: (counts[i] / totalTiles) * 100,
     }))
