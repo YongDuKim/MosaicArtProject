@@ -5,12 +5,15 @@ import {
   formatPercent,
   formatTimestamp,
 } from "../lib/format";
+import TileThumb from "./TileThumb";
 
 interface Props {
   result: MosaicDone;
   inputName: string;
   selectedTile: string | null;
   onSelectTile: (name: string | null) => void;
+  /** 生成時のタイルインデックスと対応する bitmap 配列 (サムネイル用) */
+  tileBitmaps: (ImageBitmap | undefined)[];
 }
 
 export default function StatsTable({
@@ -18,6 +21,7 @@ export default function StatsTable({
   inputName,
   selectedTile,
   onSelectTile,
+  tileBitmaps,
 }: Props) {
   const handleDownload = () => {
     const text = buildStatsText(result, inputName);
@@ -48,19 +52,33 @@ export default function StatsTable({
             </tr>
           </thead>
           <tbody>
-            {result.stats.map((stat) => (
-              <tr
-                key={stat.name}
-                className={stat.name === selectedTile ? "selected" : undefined}
-                onClick={() =>
-                  onSelectTile(stat.name === selectedTile ? null : stat.name)
-                }
-              >
-                <td>{stat.name}</td>
-                <td>{stat.count.toLocaleString()}</td>
-                <td>{formatPercent(stat.percentage)}%</td>
-              </tr>
-            ))}
+            {result.stats.map((stat) => {
+              // 生成後にタイルが入れ替わっていた場合に取り違えないよう名前で整合を確認する
+              const bitmap =
+                result.tileNames[stat.index] === stat.name
+                  ? tileBitmaps[stat.index]
+                  : undefined;
+              return (
+                <tr
+                  key={stat.index}
+                  className={
+                    stat.name === selectedTile ? "selected" : undefined
+                  }
+                  onClick={() =>
+                    onSelectTile(stat.name === selectedTile ? null : stat.name)
+                  }
+                >
+                  <td>
+                    <span className="tile-cell">
+                      <TileThumb bitmap={bitmap} />
+                      <span className="tile-name">{stat.name}</span>
+                    </span>
+                  </td>
+                  <td>{stat.count.toLocaleString()}</td>
+                  <td>{formatPercent(stat.percentage)}%</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

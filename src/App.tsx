@@ -94,6 +94,12 @@ export default function App() {
     [],
   );
 
+  // 生成時のタイルインデックス (result.tileNames) と対応するサムネイル用 bitmap 配列
+  const tileBitmaps = useMemo(
+    () => (tiles ?? []).map((t) => t.bitmap),
+    [tiles],
+  );
+
   const plan = useMemo(
     () =>
       input
@@ -380,6 +386,7 @@ export default function App() {
             inputName={result.inputName}
             selectedTile={selectedTile}
             onSelectTile={setSelectedTile}
+            tileBitmaps={tileBitmaps}
           />
         </>
       )}
