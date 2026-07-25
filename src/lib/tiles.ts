@@ -1,5 +1,6 @@
 import type { TileInfo } from "./types";
 import { averageColorOfBitmap } from "./colorUtils";
+import { decodeImageBitmap } from "./decode";
 
 /** タイルとして保持する正方形ビットマップの1辺 (n の最大値 128 の2倍の品質余裕) */
 const TILE_SIZE = 256;
@@ -22,21 +23,21 @@ export const tileKey = (file: File) => `${file.name}:${file.size}`;
  */
 async function decodeReduced(blob: Blob): Promise<ImageBitmap> {
   try {
-    let bitmap = await createImageBitmap(blob, {
+    let bitmap = await decodeImageBitmap(blob, {
       resizeWidth: DECODE_TARGET,
       resizeQuality: "high",
     });
     // 横長パノラマ等で短辺 (高さ) がタイルサイズを下回った場合は高さ基準で取り直す
     if (bitmap.height < TILE_SIZE) {
       bitmap.close();
-      bitmap = await createImageBitmap(blob, {
+      bitmap = await decodeImageBitmap(blob, {
         resizeHeight: DECODE_TARGET,
         resizeQuality: "high",
       });
     }
     return bitmap;
   } catch {
-    return createImageBitmap(blob);
+    return decodeImageBitmap(blob);
   }
 }
 

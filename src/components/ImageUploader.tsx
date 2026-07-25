@@ -19,7 +19,11 @@ export default function ImageUploader({
 
   const handleFiles = (files: FileList | null) => {
     const file = files?.[0];
-    if (file && file.type.startsWith("image/")) {
+    // デスクトップでは HEIC の File.type が空になることがあるため拡張子でも許可する
+    if (
+      file &&
+      (file.type.startsWith("image/") || /\.(heic|heif)$/i.test(file.name))
+    ) {
       onSelect(file);
     }
   };
@@ -57,7 +61,7 @@ export default function ImageUploader({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.heic,.heif"
         hidden
         onChange={handleChange}
         disabled={disabled}

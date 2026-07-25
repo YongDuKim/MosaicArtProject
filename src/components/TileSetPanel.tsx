@@ -69,7 +69,7 @@ export default function TileSetPanel({
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif"
           multiple
           hidden
           onChange={handleChange}

@@ -11,6 +11,7 @@ import type {
 } from "./lib/types";
 import { computePlan } from "./lib/mosaic";
 import { loadTiles, tileKey } from "./lib/tiles";
+import { decodeImageBitmap } from "./lib/decode";
 import ImageUploader from "./components/ImageUploader";
 import ParamsPanel from "./components/ParamsPanel";
 import TileSetPanel from "./components/TileSetPanel";
@@ -109,7 +110,7 @@ export default function App() {
 
   const handleSelect = async (file: File) => {
     try {
-      const bitmap = await createImageBitmap(file);
+      const bitmap = await decodeImageBitmap(file);
       setInput((prev) => {
         if (prev) {
           URL.revokeObjectURL(prev.url);
