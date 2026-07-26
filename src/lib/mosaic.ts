@@ -14,9 +14,12 @@ export const MOBILE_MAX_OUTPUT_DIM = 4096;
 /** 実行中の端末に応じた出力1辺の上限を返す */
 export function deviceMaxOutputDim(): number {
   if (typeof navigator === "undefined") return MAX_OUTPUT_DIM;
-  const mobile =
-    navigator.maxTouchPoints > 1 ||
-    /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
+  const ua = navigator.userAgent;
+  // タッチ対応のデスクトップ (Windows ノート等) は maxTouchPoints > 1 になるため、
+  // それ単独ではモバイル判定しない。判定は userAgent を主に用いる。
+  // iPadOS 13+ は Mac を偽装するので、その場合のみタッチ数を併用して補足する。
+  const iPadOS = /Macintosh/i.test(ua) && navigator.maxTouchPoints > 1;
+  const mobile = /iPhone|iPad|iPod|Android|Mobile/i.test(ua) || iPadOS;
   return mobile ? MOBILE_MAX_OUTPUT_DIM : MAX_OUTPUT_DIM;
 }
 
