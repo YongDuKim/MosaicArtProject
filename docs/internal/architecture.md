@@ -19,7 +19,8 @@
 - `src/workers/mosaicWorker.ts` — 生成処理を行う Web Worker
 - `src/workers/tileWorker.ts` — タイルのデコードを行う Web Worker
 - `src/components/` — アップローダー・タイル・パラメータ・プレビュー・統計の UI
+- `src/lib/*.test.ts` — 単体テスト ([テスト](testing.md))
 
 ## デプロイ
 
-`main` ブランチへの push で GitHub Actions (`.github/workflows/deploy.yml`) が自動ビルドし、GitHub Pages にデプロイする。リポジトリ設定で Pages の Source を「GitHub Actions」にしておく必要がある。
+`main` ブランチへの push で GitHub Actions (`.github/workflows/deploy.yml`) がテストとビルドを実行し、GitHub Pages にデプロイする。リポジトリ設定で Pages の Source を「GitHub Actions」にしておく必要がある。
