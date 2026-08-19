@@ -14,13 +14,13 @@ Vitest による単体テスト。`npm test` で1回実行し、`npm run test:wa
 
 ## 対象
 
-| ファイル                     | 対象                                     |
-| ---------------------------- | ---------------------------------------- |
-| `src/lib/format.test.ts`     | 表示フォーマットと統計テキストの組み立て |
-| `src/lib/colorUtils.test.ts` | RGB 二乗距離による最近傍タイルの選択     |
-| `src/lib/mosaic.test.ts`     | 出力レイアウト計算と端末別の出力上限判定 |
-| `src/lib/decode.test.ts`     | マジックナンバーによる HEIC/HEIF 判定    |
-| `src/lib/tiles.test.ts`      | タイルの重複判定キー                     |
+| ファイル                     | 対象                                                             |
+| ---------------------------- | ---------------------------------------------------------------- |
+| `src/lib/format.test.ts`     | 表示フォーマット・統計テキストの組み立て・出力形式と拡張子の対応 |
+| `src/lib/colorUtils.test.ts` | RGB 二乗距離による最近傍タイルの選択                             |
+| `src/lib/mosaic.test.ts`     | 出力レイアウト計算と端末別の出力上限判定                         |
+| `src/lib/decode.test.ts`     | マジックナンバーによる HEIC/HEIF 判定                            |
+| `src/lib/tiles.test.ts`      | タイルの重複判定キー                                             |
 
 `src/components/` と `src/workers/`、および canvas を使う `colorUtils.ts` の平均色計算・`tiles.ts` のデコードと縮小・`mosaic.ts` の `generateMosaic` はテスト対象外。
 

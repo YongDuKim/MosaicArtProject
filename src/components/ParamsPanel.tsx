@@ -1,4 +1,9 @@
-import type { MosaicParams, MosaicPlan } from "../lib/types";
+import type { MosaicParams, MosaicPlan, OutputFormat } from "../lib/types";
+
+const FORMATS: { value: OutputFormat; label: string; hint: string }[] = [
+  { value: "jpeg", label: "JPG", hint: "ファイルサイズが小さい" },
+  { value: "png", label: "PNG", hint: "劣化しないがサイズが大きい" },
+];
 
 interface Props {
   params: MosaicParams;
@@ -68,6 +73,26 @@ export default function ParamsPanel({
           }
         />
       </label>
+
+      <fieldset className="param-format" disabled={generating}>
+        <legend>
+          出力形式
+          <small>写真素材では JPG の方が大幅に小さくなる</small>
+        </legend>
+        {FORMATS.map((format) => (
+          <label key={format.value}>
+            <input
+              type="radio"
+              name="output-format"
+              value={format.value}
+              checked={params.format === format.value}
+              onChange={() => onChange({ ...params, format: format.value })}
+            />
+            {format.label}
+            <small>{format.hint}</small>
+          </label>
+        ))}
+      </fieldset>
 
       <label className="param-check">
         <input

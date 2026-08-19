@@ -1,5 +1,6 @@
 import type { MosaicDone, MosaicPlan, WorkerRequest } from "./types";
 import { findClosestColorIndex } from "./colorUtils";
+import { JPEG_QUALITY, extensionForMimeType, mimeForFormat } from "./format";
 
 /** ブラウザの canvas 1辺の実用上限に合わせた出力1辺の最大値 (デスクトップ) */
 export const MAX_OUTPUT_DIM = 16384;
@@ -60,7 +61,16 @@ export async function generateMosaic(
   req: WorkerRequest,
   onProgress: (percent: number, label?: string) => void,
 ): Promise<MosaicDone> {
-  const { input, tiles, gridWidth, gridHeight, n, rotate, colorAdjust } = req;
+  const {
+    input,
+    tiles,
+    gridWidth,
+    gridHeight,
+    n,
+    rotate,
+    colorAdjust,
+    format,
+  } = req;
 
   // 入力画像をグリッドサイズに縮小し、1ピクセル = 1セルの平均色として読む
   const small = new OffscreenCanvas(gridWidth, gridHeight);
@@ -146,7 +156,7 @@ export async function generateMosaic(
         outCtx.restore();
       }
     }
-    // PNG エンコード (大出力では数十秒かかる) の分を残すため 90% までに収める
+    // エンコード (大出力では数十秒かかる) の分を残すため 90% までに収める
     const percent = Math.round(((gy + 1) / gridHeight) * 90);
     if (percent !== lastPercent) {
       lastPercent = percent;
@@ -154,8 +164,13 @@ export async function generateMosaic(
     }
   }
 
-  onProgress(95, "PNGエンコード中…");
-  const blob = await output.convertToBlob({ type: "image/png" });
+  const mime = mimeForFormat(format);
+  onProgress(95, `${extensionForMimeType(mime).toUpperCase()}エンコード中…`);
+  // 品質は PNG では無視される
+  const blob = await output.convertToBlob({
+    type: mime,
+    quality: JPEG_QUALITY,
+  });
 
   const totalTiles = gridWidth * gridHeight;
   const stats = tiles

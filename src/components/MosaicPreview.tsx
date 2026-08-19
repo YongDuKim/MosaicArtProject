@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
 import type { MosaicDone } from "../lib/types";
-import { downloadBlob, formatTimestamp } from "../lib/format";
+import {
+  downloadBlob,
+  extensionForMimeType,
+  formatTimestamp,
+} from "../lib/format";
 
 interface Props {
   result: MosaicDone;
@@ -37,6 +41,9 @@ export default function MosaicPreview({
     }
     ctx.putImageData(imageData, 0, 0);
   }, [result, selectedTile]);
+
+  // 実際にエンコードされた形式に合わせる (要求した形式が使えないとブラウザは PNG を返す)
+  const extension = extensionForMimeType(result.blob.type);
 
   const selectedCount = selectedTile
     ? result.stats.find((s) => s.name === selectedTile)?.count
@@ -82,10 +89,13 @@ export default function MosaicPreview({
       <button
         type="button"
         onClick={() =>
-          downloadBlob(result.blob, `mosaic_output_${formatTimestamp()}.png`)
+          downloadBlob(
+            result.blob,
+            `mosaic_output_${formatTimestamp()}.${extension}`,
+          )
         }
       >
-        PNGをダウンロード
+        {extension.toUpperCase()}をダウンロード
       </button>
     </div>
   );

@@ -246,6 +246,40 @@
   accent-color: var(--accent);
 }
 
+.param-format {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.param-format legend {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.param-format legend small,
+.param-format label small {
+  color: var(--text-sub);
+}
+
+.param-format label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.param-format input {
+  accent-color: var(--accent);
+}
+
 .param-check {
   display: flex;
   align-items: center;
