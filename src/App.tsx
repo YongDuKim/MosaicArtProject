@@ -37,6 +37,7 @@ const DEFAULT_PARAMS: MosaicParams = {
   colorAdjust: 50,
   // モザイクの素材は写真が中心で、PNG では出力が数百 MB になりうるため JPG を既定にする
   format: "jpeg",
+  jpegResolution: "high",
 };
 
 /** 直近のタイル追加バッチの結果 (累計枚数は tiles.length が持つ) */
@@ -328,6 +329,7 @@ export default function App() {
         rotate: params.rotate,
         colorAdjust: params.colorAdjust / 100,
         format: params.format,
+        jpegResolution: params.jpegResolution,
       };
       worker.postMessage(request, [inputCopy, ...tileCopies]);
     } catch (err) {

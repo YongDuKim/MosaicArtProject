@@ -1,4 +1,9 @@
-import type { MosaicDone, MosaicPlan, WorkerRequest } from "./types";
+import type {
+  JpegResolution,
+  MosaicDone,
+  MosaicPlan,
+  WorkerRequest,
+} from "./types";
 import { findClosestColorIndex } from "./colorUtils";
 import { JPEG_QUALITY, extensionForMimeType, mimeForFormat } from "./format";
 
@@ -22,6 +27,34 @@ export function deviceMaxOutputDim(): number {
   const iPadOS = /Macintosh/i.test(ua) && navigator.maxTouchPoints > 1;
   const mobile = /iPhone|iPad|iPod|Android|Mobile/i.test(ua) || iPadOS;
   return mobile ? MOBILE_MAX_OUTPUT_DIM : MAX_OUTPUT_DIM;
+}
+
+/**
+ * JPG の書き出し解像度ごとの、出力長辺の上限 (px)。
+ * high は縮小しない (生成した原寸のまま書き出す)。
+ */
+export const JPEG_RESOLUTION_LIMITS: Record<JpegResolution, number> = {
+  low: 2048,
+  medium: 4096,
+  high: Infinity,
+};
+
+/**
+ * 長辺を上限に収めたときの書き出しサイズ。
+ * 元より大きくはしない (拡大しても情報は増えないため)。
+ */
+export function scaledOutputSize(
+  width: number,
+  height: number,
+  maxLongEdge: number,
+): { width: number; height: number } {
+  const longEdge = Math.max(width, height);
+  if (longEdge <= maxLongEdge) return { width, height };
+  const scale = maxLongEdge / longEdge;
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  };
 }
 
 /**
@@ -56,6 +89,50 @@ export function computePlan(
   };
 }
 
+/**
+ * 書き出し用に出力キャンバスを縮小する。上限内ならそのまま返す。
+ * 一度に大きく縮小するとエイリアシングでタイルの細部が潰れるため、
+ * 目標の2倍を超える間は1/2ずつ段階的に縮小する (タイル読み込み時と同じ方針)。
+ */
+function downscaleForExport(
+  source: OffscreenCanvas,
+  maxLongEdge: number,
+): OffscreenCanvas {
+  const target = scaledOutputSize(source.width, source.height, maxLongEdge);
+  if (target.width === source.width && target.height === source.height) {
+    return source;
+  }
+
+  let current = source;
+  while (current.width > target.width * 2) {
+    const half = new OffscreenCanvas(
+      Math.ceil(current.width / 2),
+      Math.ceil(current.height / 2),
+    );
+    const halfCtx = half.getContext("2d");
+    if (!halfCtx) throw new Error("2Dコンテキストを取得できませんでした");
+    halfCtx.imageSmoothingQuality = "high";
+    halfCtx.drawImage(current, 0, 0, half.width, half.height);
+    if (current !== source) {
+      // 中間キャンバスは原寸に近く大きいので、すぐ解放できるようにしておく
+      current.width = 0;
+      current.height = 0;
+    }
+    current = half;
+  }
+
+  const canvas = new OffscreenCanvas(target.width, target.height);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("2Dコンテキストを取得できませんでした");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(current, 0, 0, target.width, target.height);
+  if (current !== source) {
+    current.width = 0;
+    current.height = 0;
+  }
+  return canvas;
+}
+
 /** モザイクアートを生成する (Worker 内で実行される) */
 export async function generateMosaic(
   req: WorkerRequest,
@@ -70,6 +147,7 @@ export async function generateMosaic(
     rotate,
     colorAdjust,
     format,
+    jpegResolution,
   } = req;
 
   // 入力画像をグリッドサイズに縮小し、1ピクセル = 1セルの平均色として読む
@@ -165,9 +243,14 @@ export async function generateMosaic(
   }
 
   const mime = mimeForFormat(format);
+  // PNG は劣化なしで残す用途なので常に原寸。JPG だけ書き出し解像度を適用する
+  const encodeSource =
+    format === "jpeg"
+      ? downscaleForExport(output, JPEG_RESOLUTION_LIMITS[jpegResolution])
+      : output;
   onProgress(95, `${extensionForMimeType(mime).toUpperCase()}エンコード中…`);
   // 品質は PNG では無視される
-  const blob = await output.convertToBlob({
+  const blob = await encodeSource.convertToBlob({
     type: mime,
     quality: JPEG_QUALITY,
   });
@@ -194,7 +277,7 @@ export async function generateMosaic(
     tileKindsTotal: tiles.length,
     gridWidth,
     gridHeight,
-    outputWidth: output.width,
-    outputHeight: output.height,
+    outputWidth: encodeSource.width,
+    outputHeight: encodeSource.height,
   };
 }

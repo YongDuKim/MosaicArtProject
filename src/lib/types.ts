@@ -10,6 +10,12 @@ export interface TileInfo {
 /** 出力画像の形式 */
 export type OutputFormat = "png" | "jpeg";
 
+/**
+ * JPG で書き出すときの解像度。
+ * 生成そのものは常に原寸で行い、JPG のエンコード直前に縮小する。
+ */
+export type JpegResolution = "low" | "medium" | "high";
+
 /** 生成パラメータ */
 export interface MosaicParams {
   /** グリッド解像度: 入力画像の辺をこの値で割った数がグリッド数になる (小さいほど細かい) */
@@ -22,6 +28,8 @@ export interface MosaicParams {
   colorAdjust: number;
   /** 出力画像の形式 */
   format: OutputFormat;
+  /** JPG の書き出し解像度 (PNG では使わない) */
+  jpegResolution: JpegResolution;
 }
 
 /** タイル使用統計 (1タイル分) */
@@ -62,6 +70,7 @@ export interface WorkerRequest {
   /** 色補正の強さ (0-1)。ディテール保持型の色シフトに使う */
   colorAdjust: number;
   format: OutputFormat;
+  jpegResolution: JpegResolution;
 }
 
 /** 生成完了時のデータ */
@@ -78,7 +87,9 @@ export interface MosaicDone {
   tileKindsTotal: number;
   gridWidth: number;
   gridHeight: number;
+  /** 実際に書き出された画像の幅 (JPG の縮小後のサイズ) */
   outputWidth: number;
+  /** 実際に書き出された画像の高さ (JPG の縮小後のサイズ) */
   outputHeight: number;
 }
 
