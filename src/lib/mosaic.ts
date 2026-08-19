@@ -138,8 +138,7 @@ export async function generateMosaic(
   const tileCanvases: OffscreenCanvas[] = [];
   const tilePixels: Uint8ClampedArray[] = [];
   for (const tile of tiles) {
-    // 256px のタイルを n (既定25) まで一気に縮小するとエイリアシングが出るため、
-    // 段階的縮小を挟む
+    // 256px のタイルを n (既定25) へ縮小する。縮小率が大きいので段階的に縮める
     const canvas = drawDownscaled(
       tile.bitmap,
       { x: 0, y: 0, width: tile.bitmap.width, height: tile.bitmap.height },
