@@ -1,4 +1,16 @@
-import type { MosaicParams, MosaicPlan, OutputFormat } from "../lib/types";
+import type {
+  JpegResolution,
+  MosaicParams,
+  MosaicPlan,
+  OutputFormat,
+} from "../lib/types";
+import { JPEG_RESOLUTION_LIMITS, scaledOutputSize } from "../lib/mosaic";
+
+const RESOLUTIONS: { value: JpegResolution; label: string }[] = [
+  { value: "low", label: "低" },
+  { value: "medium", label: "中" },
+  { value: "high", label: "高" },
+];
 
 const FORMATS: { value: OutputFormat; label: string; hint: string }[] = [
   { value: "jpeg", label: "JPG", hint: "ファイルサイズが小さい" },
@@ -93,6 +105,42 @@ export default function ParamsPanel({
           </label>
         ))}
       </fieldset>
+
+      {params.format === "jpeg" && (
+        <fieldset className="param-format" disabled={generating}>
+          <legend>
+            JPGの解像度
+            <small>下げるとダウンロードするファイルが軽くなる</small>
+          </legend>
+          {RESOLUTIONS.map((resolution) => {
+            const limit = JPEG_RESOLUTION_LIMITS[resolution.value];
+            const size = plan
+              ? scaledOutputSize(plan.outputWidth, plan.outputHeight, limit)
+              : null;
+            return (
+              <label key={resolution.value}>
+                <input
+                  type="radio"
+                  name="jpeg-resolution"
+                  value={resolution.value}
+                  checked={params.jpegResolution === resolution.value}
+                  onChange={() =>
+                    onChange({ ...params, jpegResolution: resolution.value })
+                  }
+                />
+                {resolution.label}
+                <small>
+                  {size
+                    ? `${size.width.toLocaleString()} × ${size.height.toLocaleString()} px`
+                    : limit === Infinity
+                      ? "原寸のまま"
+                      : `長辺 ${limit.toLocaleString()}px 以下`}
+                </small>
+              </label>
+            );
+          })}
+        </fieldset>
+      )}
 
       <label className="param-check">
         <input

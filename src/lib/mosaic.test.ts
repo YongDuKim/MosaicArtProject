@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
+  JPEG_RESOLUTION_LIMITS,
   MAX_OUTPUT_DIM,
   MOBILE_MAX_OUTPUT_DIM,
   computePlan,
   deviceMaxOutputDim,
+  scaledOutputSize,
 } from "./mosaic";
 
 describe("computePlan", () => {
@@ -99,5 +101,49 @@ describe("deviceMaxOutputDim", () => {
   test("navigator がなければデスクトップ上限", () => {
     vi.stubGlobal("navigator", undefined);
     expect(deviceMaxOutputDim()).toBe(MAX_OUTPUT_DIM);
+  });
+});
+
+describe("scaledOutputSize", () => {
+  test("上限内なら元のサイズのまま", () => {
+    expect(scaledOutputSize(3000, 2000, 4096)).toEqual({
+      width: 3000,
+      height: 2000,
+    });
+  });
+
+  test("長辺を上限に合わせ、縦横比を保つ", () => {
+    expect(scaledOutputSize(8000, 4000, 4096)).toEqual({
+      width: 4096,
+      height: 2048,
+    });
+  });
+
+  test("縦長でも長辺を基準にする", () => {
+    expect(scaledOutputSize(4000, 8000, 4096)).toEqual({
+      width: 2048,
+      height: 4096,
+    });
+  });
+
+  test("元より大きくはしない", () => {
+    // 解像度「高」は縮小しない指定なので、小さい出力を引き伸ばしてはいけない
+    expect(scaledOutputSize(1000, 800, JPEG_RESOLUTION_LIMITS.high)).toEqual({
+      width: 1000,
+      height: 800,
+    });
+  });
+
+  test("極端に細長くても短辺が0にならない", () => {
+    expect(scaledOutputSize(10000, 3, 2048).height).toBe(1);
+  });
+
+  test("プリセットは 低 < 中 < 高 の順に大きい", () => {
+    expect(JPEG_RESOLUTION_LIMITS.low).toBeLessThan(
+      JPEG_RESOLUTION_LIMITS.medium,
+    );
+    expect(JPEG_RESOLUTION_LIMITS.medium).toBeLessThan(
+      JPEG_RESOLUTION_LIMITS.high,
+    );
   });
 });
