@@ -26,4 +26,6 @@ Vitest による単体テスト。`npm test` で1回実行し、`npm run test:wa
 
 ## CI
 
-`.github/workflows/deploy.yml` の build ジョブがビルド前に `npm test` を実行する。テストが失敗すると GitHub Pages へデプロイされない。
+Pull Request では `.github/workflows/ci.yml` が `npm run format:check`・`npm run lint`・`npm test`・`npm run build` を実行する。
+
+`main` への push では `.github/workflows/deploy.yml` の build ジョブがビルド前に `npm test` を実行する。テストが失敗すると GitHub Pages へデプロイされない。
