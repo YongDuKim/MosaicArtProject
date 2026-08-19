@@ -1,4 +1,9 @@
-import type { MosaicDone, MosaicPlan, WorkerRequest } from "./types";
+import type {
+  MosaicDone,
+  MosaicPlan,
+  OutputSize,
+  WorkerRequest,
+} from "./types";
 import { findClosestColorIndex } from "./colorUtils";
 import { JPEG_QUALITY, extensionForMimeType, mimeForFormat } from "./format";
 
@@ -24,6 +29,45 @@ export function deviceMaxOutputDim(): number {
   return mobile ? MOBILE_MAX_OUTPUT_DIM : MAX_OUTPUT_DIM;
 }
 
+/** 出力サイズのプリセットごとの目標出力長辺 (px) */
+export const OUTPUT_SIZE_TARGETS: Record<OutputSize, number> = {
+  low: 4096,
+  medium: 8192,
+  high: MAX_OUTPUT_DIM,
+};
+
+/**
+ * タイル解像度 n の上限。
+ * タイルは 256px の正方形として保持しているため、これ以上大きくしても
+ * 元のタイル画像に無い情報は増えない。
+ */
+export const MAX_TILE_N = 128;
+
+/** 入力画像とグリッド解像度 x からグリッド数を求める */
+export function computeGrid(
+  imageWidth: number,
+  imageHeight: number,
+  x: number,
+): { gridWidth: number; gridHeight: number } {
+  return {
+    gridWidth: Math.max(1, Math.floor(imageWidth / x)),
+    gridHeight: Math.max(1, Math.floor(imageHeight / x)),
+  };
+}
+
+/**
+ * 目標の出力長辺に収まる最大のタイル解像度 n を求める。
+ * グリッドが細かいと n = 1 でも目標を超えることがあるが、n はそれ以上小さくできない。
+ */
+export function tileSizeForTarget(
+  gridWidth: number,
+  gridHeight: number,
+  target: number,
+): number {
+  const maxGrid = Math.max(gridWidth, gridHeight);
+  return Math.min(MAX_TILE_N, Math.max(1, Math.floor(target / maxGrid)));
+}
+
 /**
  * 出力レイアウトを計算する。
  * grid = 入力サイズ / x、出力 = grid × n (mosaic_art_mk5.py と同じ)。
@@ -36,8 +80,7 @@ export function computePlan(
   n: number,
   maxDim = deviceMaxOutputDim(),
 ): MosaicPlan {
-  const gridWidth = Math.max(1, Math.floor(imageWidth / x));
-  const gridHeight = Math.max(1, Math.floor(imageHeight / x));
+  const { gridWidth, gridHeight } = computeGrid(imageWidth, imageHeight, x);
   const maxGrid = Math.max(gridWidth, gridHeight);
   let effectiveN = n;
   let capped = false;

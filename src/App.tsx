@@ -9,7 +9,12 @@ import type {
   WorkerRequest,
   WorkerResponse,
 } from "./lib/types";
-import { computePlan } from "./lib/mosaic";
+import {
+  OUTPUT_SIZE_TARGETS,
+  computeGrid,
+  computePlan,
+  tileSizeForTarget,
+} from "./lib/mosaic";
 import { loadTiles, tileKey } from "./lib/tiles";
 import { decodeImageBitmap } from "./lib/decode";
 import ImageUploader from "./components/ImageUploader";
@@ -32,7 +37,7 @@ interface Result extends MosaicDone {
 
 const DEFAULT_PARAMS: MosaicParams = {
   x: 5,
-  n: 25,
+  outputSize: "medium",
   rotate: true,
   colorAdjust: 50,
   // モザイクの素材は写真が中心で、PNG では出力が数百 MB になりうるため JPG を既定にする
@@ -103,18 +108,18 @@ export default function App() {
     [tiles],
   );
 
-  const plan = useMemo(
-    () =>
-      input
-        ? computePlan(
-            input.bitmap.width,
-            input.bitmap.height,
-            params.x,
-            params.n,
-          )
-        : null,
-    [input, params.x, params.n],
-  );
+  const plan = useMemo(() => {
+    if (!input) return null;
+    const { width, height } = input.bitmap;
+    // 出力サイズのプリセットは「目標の出力長辺」なので、グリッド数から n を逆算する
+    const grid = computeGrid(width, height, params.x);
+    const n = tileSizeForTarget(
+      grid.gridWidth,
+      grid.gridHeight,
+      OUTPUT_SIZE_TARGETS[params.outputSize],
+    );
+    return computePlan(width, height, params.x, n);
+  }, [input, params.x, params.outputSize]);
 
   const handleSelect = async (file: File) => {
     try {

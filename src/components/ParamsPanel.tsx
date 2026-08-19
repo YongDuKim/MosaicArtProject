@@ -1,4 +1,16 @@
-import type { MosaicParams, MosaicPlan, OutputFormat } from "../lib/types";
+import type {
+  MosaicParams,
+  MosaicPlan,
+  OutputFormat,
+  OutputSize,
+} from "../lib/types";
+import { OUTPUT_SIZE_TARGETS } from "../lib/mosaic";
+
+const SIZES: { value: OutputSize; label: string }[] = [
+  { value: "low", label: "低" },
+  { value: "medium", label: "中" },
+  { value: "high", label: "高" },
+];
 
 const FORMATS: { value: OutputFormat; label: string; hint: string }[] = [
   { value: "jpeg", label: "JPG", hint: "ファイルサイズが小さい" },
@@ -41,20 +53,27 @@ export default function ParamsPanel({
         />
       </label>
 
-      <label className="param-row">
-        <span>
-          タイル解像度 <code>n = {params.n}</code>
-          <small>タイル1枚の出力ピクセル数 (大きいほど拡大時に鮮明)</small>
-        </span>
-        <input
-          type="range"
-          min={8}
-          max={128}
-          value={params.n}
-          disabled={generating}
-          onChange={(e) => onChange({ ...params, n: Number(e.target.value) })}
-        />
-      </label>
+      <fieldset className="param-format" disabled={generating}>
+        <legend>
+          出力サイズ
+          <small>大きいほど鮮明だがファイルも重くなる</small>
+        </legend>
+        {SIZES.map((size) => (
+          <label key={size.value}>
+            <input
+              type="radio"
+              name="output-size"
+              value={size.value}
+              checked={params.outputSize === size.value}
+              onChange={() => onChange({ ...params, outputSize: size.value })}
+            />
+            {size.label}
+            <small>
+              長辺 {OUTPUT_SIZE_TARGETS[size.value].toLocaleString()}px 目安
+            </small>
+          </label>
+        ))}
+      </fieldset>
 
       <label className="param-row">
         <span>
@@ -112,16 +131,26 @@ export default function ParamsPanel({
           </p>
           <p>
             出力サイズ: {plan.outputWidth.toLocaleString()} ×{" "}
-            {plan.outputHeight.toLocaleString()} px
+            {plan.outputHeight.toLocaleString()} px (タイル解像度 n ={" "}
+            {plan.effectiveN})
           </p>
           {plan.capped && (
             <p className="warning">
-              出力サイズがこの端末の上限 ({plan.maxDim.toLocaleString()}px)
-              を超えるため、タイル解像度を n = {params.n} → {plan.effectiveN}{" "}
-              に自動調整します。タイルを鮮明にしたい場合は グリッド解像度 x
+              この端末の上限 ({plan.maxDim.toLocaleString()}px)
+              に収まるよう、タイル解像度を n = {plan.effectiveN}{" "}
+              に自動調整しました。タイルを鮮明にしたい場合は グリッド解像度 x
               を大きくしてください
             </p>
           )}
+          {!plan.capped &&
+            Math.max(plan.outputWidth, plan.outputHeight) >
+              OUTPUT_SIZE_TARGETS[params.outputSize] && (
+              <p className="warning">
+                グリッドが細かいため、出力が目標の長辺 (
+                {OUTPUT_SIZE_TARGETS[params.outputSize].toLocaleString()}px)
+                を超えます。小さくするには グリッド解像度 x を大きくしてください
+              </p>
+            )}
         </div>
       )}
 

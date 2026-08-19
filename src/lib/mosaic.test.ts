@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   MAX_OUTPUT_DIM,
+  MAX_TILE_N,
   MOBILE_MAX_OUTPUT_DIM,
+  OUTPUT_SIZE_TARGETS,
+  computeGrid,
   computePlan,
   deviceMaxOutputDim,
+  tileSizeForTarget,
 } from "./mosaic";
 
 describe("computePlan", () => {
@@ -99,5 +103,45 @@ describe("deviceMaxOutputDim", () => {
   test("navigator がなければデスクトップ上限", () => {
     vi.stubGlobal("navigator", undefined);
     expect(deviceMaxOutputDim()).toBe(MAX_OUTPUT_DIM);
+  });
+});
+
+describe("computeGrid", () => {
+  test("入力サイズ / x の切り捨て", () => {
+    expect(computeGrid(1000, 800, 5)).toEqual({
+      gridWidth: 200,
+      gridHeight: 160,
+    });
+  });
+
+  test("x が入力サイズより大きくても1以上", () => {
+    expect(computeGrid(10, 10, 100)).toEqual({ gridWidth: 1, gridHeight: 1 });
+  });
+});
+
+describe("tileSizeForTarget", () => {
+  test("目標の長辺に収まる最大の n を返す", () => {
+    // 長辺グリッド 200 に対し目標 8192px なら n = 40 (200 × 40 = 8000px)
+    expect(tileSizeForTarget(200, 160, 8192)).toBe(40);
+  });
+
+  test("長辺グリッドを基準にする (縦長でも同じ)", () => {
+    expect(tileSizeForTarget(160, 200, 8192)).toBe(40);
+  });
+
+  test("プリセットが大きいほど n も大きい", () => {
+    const low = tileSizeForTarget(200, 160, OUTPUT_SIZE_TARGETS.low);
+    const medium = tileSizeForTarget(200, 160, OUTPUT_SIZE_TARGETS.medium);
+    expect(low).toBeLessThan(medium);
+  });
+
+  test("タイルの保持解像度を超えて拡大しない", () => {
+    // グリッドが粗いと目標から逆算した n が過大になるため上限で止める
+    expect(tileSizeForTarget(1, 1, MAX_OUTPUT_DIM)).toBe(MAX_TILE_N);
+  });
+
+  test("グリッドが細かすぎても n は 1 を下回らない", () => {
+    // 目標を超えてしまうが、n はこれ以上小さくできない
+    expect(tileSizeForTarget(12000, 8000, OUTPUT_SIZE_TARGETS.low)).toBe(1);
   });
 });

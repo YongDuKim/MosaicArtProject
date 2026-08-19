@@ -10,12 +10,15 @@ export interface TileInfo {
 /** 出力画像の形式 */
 export type OutputFormat = "png" | "jpeg";
 
+/** 出力サイズのプリセット (目標とする出力長辺) */
+export type OutputSize = "low" | "medium" | "high";
+
 /** 生成パラメータ */
 export interface MosaicParams {
   /** グリッド解像度: 入力画像の辺をこの値で割った数がグリッド数になる (小さいほど細かい) */
   x: number;
-  /** タイル1枚の出力ピクセルサイズ */
-  n: number;
+  /** 出力サイズのプリセット。ここからタイル解像度 n を逆算する */
+  outputSize: OutputSize;
   /** ランダム回転 (0/90/180/270度) を行うか */
   rotate: boolean;
   /** 色補正の強さ (0-100%)。セル目標色との差分をタイル全ピクセルに加算し、ディテールを保ったまま色味を近づける */
@@ -37,7 +40,7 @@ export interface UsageStat {
 export interface MosaicPlan {
   gridWidth: number;
   gridHeight: number;
-  /** 上限ガードで縮小された実効タイル解像度 (通常は params.n と同じ) */
+  /** 実際に使うタイル解像度 (出力サイズと端末上限から決まる) */
   effectiveN: number;
   outputWidth: number;
   outputHeight: number;
