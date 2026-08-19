@@ -4,7 +4,7 @@
 
 公開ページ: https://yongdukim.github.io/MosaicArtProject/
 
-詳細ドキュメント: [使い方](docs/user/usage.md) / [アーキテクチャ](docs/internal/architecture.md) / [アルゴリズム](docs/internal/algorithm.md)
+詳細ドキュメント: [使い方](docs/user/usage.md) / [アーキテクチャ](docs/internal/architecture.md) / [アルゴリズム](docs/internal/algorithm.md) / [テスト](docs/internal/testing.md)
 
 ## 使い方
 
@@ -30,11 +30,14 @@ npm install
 npm run dev      # 開発サーバー起動 (http://localhost:5173)
 npm run build    # 本番ビルド (dist/ に出力)
 npm run lint     # oxlint
+npm test         # vitest
 ```
+
+テストの構成は[テスト](docs/internal/testing.md)を参照してください。
 
 ## デプロイ
 
-`main` ブランチへの push で GitHub Actions (`.github/workflows/deploy.yml`) が自動ビルドし、GitHub Pages にデプロイします。リポジトリ設定で Pages の Source を「GitHub Actions」にしておく必要があります。
+`main` ブランチへの push で GitHub Actions (`.github/workflows/deploy.yml`) がテストとビルドを実行し、GitHub Pages にデプロイします。リポジトリ設定で Pages の Source を「GitHub Actions」にしておく必要があります。
 
 ## アルゴリズム
 
