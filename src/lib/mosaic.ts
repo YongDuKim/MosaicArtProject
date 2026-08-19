@@ -6,6 +6,7 @@ import type {
 } from "./types";
 import { findClosestColorIndex } from "./colorUtils";
 import { JPEG_QUALITY, extensionForMimeType, mimeForFormat } from "./format";
+import { drawDownscaled } from "./resize";
 
 /** ブラウザの canvas 1辺の実用上限に合わせた出力1辺の最大値 (デスクトップ) */
 export const MAX_OUTPUT_DIM = 16384;
@@ -89,11 +90,7 @@ export function computePlan(
   };
 }
 
-/**
- * 書き出し用に出力キャンバスを縮小する。上限内ならそのまま返す。
- * 一度に大きく縮小するとエイリアシングでタイルの細部が潰れるため、
- * 目標の2倍を超える間は1/2ずつ段階的に縮小する (タイル読み込み時と同じ方針)。
- */
+/** 書き出し用に出力キャンバスを縮小する。上限内ならそのまま返す。 */
 function downscaleForExport(
   source: OffscreenCanvas,
   maxLongEdge: number,
@@ -102,35 +99,12 @@ function downscaleForExport(
   if (target.width === source.width && target.height === source.height) {
     return source;
   }
-
-  let current = source;
-  while (current.width > target.width * 2) {
-    const half = new OffscreenCanvas(
-      Math.ceil(current.width / 2),
-      Math.ceil(current.height / 2),
-    );
-    const halfCtx = half.getContext("2d");
-    if (!halfCtx) throw new Error("2Dコンテキストを取得できませんでした");
-    halfCtx.imageSmoothingQuality = "high";
-    halfCtx.drawImage(current, 0, 0, half.width, half.height);
-    if (current !== source) {
-      // 中間キャンバスは原寸に近く大きいので、すぐ解放できるようにしておく
-      current.width = 0;
-      current.height = 0;
-    }
-    current = half;
-  }
-
-  const canvas = new OffscreenCanvas(target.width, target.height);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2Dコンテキストを取得できませんでした");
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(current, 0, 0, target.width, target.height);
-  if (current !== source) {
-    current.width = 0;
-    current.height = 0;
-  }
-  return canvas;
+  return drawDownscaled(
+    source,
+    { x: 0, y: 0, width: source.width, height: source.height },
+    target.width,
+    target.height,
+  );
 }
 
 /** モザイクアートを生成する (Worker 内で実行される) */
@@ -164,13 +138,19 @@ export async function generateMosaic(
   const tileCanvases: OffscreenCanvas[] = [];
   const tilePixels: Uint8ClampedArray[] = [];
   for (const tile of tiles) {
-    const canvas = new OffscreenCanvas(n, n);
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) throw new Error("2Dコンテキストを取得できませんでした");
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(tile.bitmap, 0, 0, n, n);
+    // 256px のタイルを n (既定25) まで一気に縮小するとエイリアシングが出るため、
+    // 段階的縮小を挟む
+    const canvas = drawDownscaled(
+      tile.bitmap,
+      { x: 0, y: 0, width: tile.bitmap.width, height: tile.bitmap.height },
+      n,
+      n,
+      { willReadFrequently: colorAdjust > 0 },
+    );
     tileCanvases.push(canvas);
     if (colorAdjust > 0) {
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) throw new Error("2Dコンテキストを取得できませんでした");
       tilePixels.push(ctx.getImageData(0, 0, n, n).data);
     }
     tile.bitmap.close();

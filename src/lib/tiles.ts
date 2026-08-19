@@ -1,6 +1,7 @@
 import type { TileInfo } from "./types";
 import { averageColorOfBitmap } from "./colorUtils";
 import { decodeImageBitmap } from "./decode";
+import { drawDownscaled } from "./resize";
 
 /** タイルとして保持する正方形ビットマップの1辺 (n の最大値 128 の2倍の品質余裕) */
 const TILE_SIZE = 256;
@@ -47,51 +48,15 @@ async function decodeReduced(blob: Blob): Promise<ImageBitmap> {
  */
 async function cropToSquareTile(source: ImageBitmap): Promise<ImageBitmap> {
   const side = Math.min(source.width, source.height);
-  const sx = (source.width - side) / 2;
-  const sy = (source.height - side) / 2;
   const size = Math.min(TILE_SIZE, side);
-
-  // 高解像度写真を一気に縮小するとエイリアシングで細部が潰れるため、
-  // 目標の2倍を超える間は1/2ずつ段階的に縮小してから最終サイズへ描画する
-  let current: OffscreenCanvas | ImageBitmap = source;
-  let currentSide = side;
-  let cropX = sx;
-  let cropY = sy;
-  while (currentSide > size * 2) {
-    const half = Math.ceil(currentSide / 2);
-    const halfCanvas = new OffscreenCanvas(half, half);
-    const halfCtx = halfCanvas.getContext("2d");
-    if (!halfCtx) throw new Error("2Dコンテキストを取得できませんでした");
-    halfCtx.imageSmoothingQuality = "high";
-    halfCtx.drawImage(
-      current,
-      cropX,
-      cropY,
-      currentSide,
-      currentSide,
-      0,
-      0,
-      half,
-      half,
-    );
-    current = halfCanvas;
-    currentSide = half;
-    cropX = 0;
-    cropY = 0;
-  }
-
-  const canvas = new OffscreenCanvas(size, size);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("2Dコンテキストを取得できませんでした");
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(
-    current,
-    cropX,
-    cropY,
-    currentSide,
-    currentSide,
-    0,
-    0,
+  const canvas = drawDownscaled(
+    source,
+    {
+      x: (source.width - side) / 2,
+      y: (source.height - side) / 2,
+      width: side,
+      height: side,
+    },
     size,
     size,
   );

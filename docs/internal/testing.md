@@ -21,6 +21,7 @@ Vitest による単体テスト。`npm test` で1回実行し、`npm run test:wa
 | `src/lib/mosaic.test.ts`     | 出力レイアウト計算・JPG 書き出し時の縮小サイズ・端末別の出力上限判定 |
 | `src/lib/decode.test.ts`     | マジックナンバーによる HEIC/HEIF 判定                                |
 | `src/lib/tiles.test.ts`      | タイルの重複判定キー                                                 |
+| `src/lib/resize.test.ts`     | 段階的縮小で経由する中間サイズ                                       |
 
 `src/components/` と `src/workers/`、および canvas を使う `colorUtils.ts` の平均色計算・`tiles.ts` のデコードと縮小・`mosaic.ts` の `generateMosaic` はテスト対象外。
 
