@@ -7,6 +7,9 @@ export interface TileInfo {
   bitmap: ImageBitmap;
 }
 
+/** 出力画像の形式 */
+export type OutputFormat = "png" | "jpeg";
+
 /** 生成パラメータ */
 export interface MosaicParams {
   /** グリッド解像度: 入力画像の辺をこの値で割った数がグリッド数になる (小さいほど細かい) */
@@ -17,6 +20,8 @@ export interface MosaicParams {
   rotate: boolean;
   /** 色補正の強さ (0-100%)。セル目標色との差分をタイル全ピクセルに加算し、ディテールを保ったまま色味を近づける */
   colorAdjust: number;
+  /** 出力画像の形式 */
+  format: OutputFormat;
 }
 
 /** タイル使用統計 (1タイル分) */
@@ -56,6 +61,7 @@ export interface WorkerRequest {
   rotate: boolean;
   /** 色補正の強さ (0-1)。ディテール保持型の色シフトに使う */
   colorAdjust: number;
+  format: OutputFormat;
 }
 
 /** 生成完了時のデータ */

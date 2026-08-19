@@ -1,4 +1,25 @@
-import type { MosaicDone } from "./types";
+import type { MosaicDone, OutputFormat } from "./types";
+
+/**
+ * JPEG のエンコード品質。
+ * モザイクは写真の集合体で高周波成分が多く、これより下げるとタイル境界に
+ * ブロックノイズが出る。0.92 は視覚的な劣化がほぼ無く、PNG より大幅に小さい。
+ */
+export const JPEG_QUALITY = 0.92;
+
+/** 出力形式に対応する MIME タイプ */
+export function mimeForFormat(format: OutputFormat): string {
+  return format === "jpeg" ? "image/jpeg" : "image/png";
+}
+
+/**
+ * 実際にエンコードされた MIME タイプに対応する拡張子。
+ * convertToBlob は対応しない形式を要求されると PNG を返すため、要求した形式ではなく
+ * 結果の type から決める (中身と拡張子の食い違いを防ぐ)。
+ */
+export function extensionForMimeType(type: string): string {
+  return type === "image/jpeg" ? "jpg" : "png";
+}
 
 /** 使用割合の表示用フォーマット。toPrecision(2) が 100 を "1.0e+2" にするのを避ける */
 export function formatPercent(percentage: number): string {

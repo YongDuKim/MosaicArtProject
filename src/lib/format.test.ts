@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { buildStatsText, formatPercent, formatTimestamp } from "./format";
+import {
+  buildStatsText,
+  extensionForMimeType,
+  formatPercent,
+  formatTimestamp,
+  mimeForFormat,
+} from "./format";
 import type { MosaicDone } from "./types";
 
 describe("formatPercent", () => {
@@ -64,5 +70,29 @@ describe("buildStatsText", () => {
     expect(text).toContain("使用されたプリセット画像の種類: 2 / 5");
     expect(text).toContain("総タイル数: 4");
     expect(text).toContain("グリッドサイズ: 2 × 2");
+  });
+});
+
+describe("mimeForFormat", () => {
+  test("出力形式を MIME タイプに変換する", () => {
+    expect(mimeForFormat("jpeg")).toBe("image/jpeg");
+    expect(mimeForFormat("png")).toBe("image/png");
+  });
+});
+
+describe("extensionForMimeType", () => {
+  test("JPEG は jpg 拡張子", () => {
+    expect(extensionForMimeType("image/jpeg")).toBe("jpg");
+  });
+
+  test("PNG は png 拡張子", () => {
+    expect(extensionForMimeType("image/png")).toBe("png");
+  });
+
+  test("未対応の形式は png として扱う", () => {
+    // convertToBlob は要求した形式に対応できないとき PNG を返す仕様のため、
+    // 想定外の type でも png を付けておけば中身と食い違わない
+    expect(extensionForMimeType("image/webp")).toBe("png");
+    expect(extensionForMimeType("")).toBe("png");
   });
 });
