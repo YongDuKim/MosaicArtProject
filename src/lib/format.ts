@@ -2,10 +2,11 @@ import type { MosaicDone, OutputFormat } from "./types";
 
 /**
  * JPEG のエンコード品質。
- * モザイクは写真の集合体で高周波成分が多く、これより下げるとタイル境界に
- * ブロックノイズが出る。0.92 は視覚的な劣化がほぼ無く、PNG より大幅に小さい。
+ * 0.9 以上を指定するとブラウザがクロマサブサンプリングを無効化し (4:2:0 → 4:4:4)、
+ * 色差成分のデータ量が倍近くに増える。モザイクはタイル境界の高周波成分が多いため、
+ * 0.9 以上ではファイルサイズが PNG と変わらなくなり、JPG にする意味がなくなる。
  */
-export const JPEG_QUALITY = 0.92;
+export const JPEG_QUALITY = 0.85;
 
 /** 出力形式に対応する MIME タイプ */
 export function mimeForFormat(format: OutputFormat): string {
