@@ -10,22 +10,22 @@ import {
 
 describe("computePlan", () => {
   test("グリッド数は入力サイズ / x の切り捨て", () => {
-    const plan = computePlan(1000, 800, 5, 25, MAX_OUTPUT_DIM);
+    const plan = computePlan(1000, 800, 5, 24, MAX_OUTPUT_DIM);
     expect(plan.gridWidth).toBe(200);
     expect(plan.gridHeight).toBe(160);
   });
 
   test("上限内なら n をそのまま使う", () => {
-    const plan = computePlan(1000, 800, 5, 25, MAX_OUTPUT_DIM);
-    expect(plan.effectiveN).toBe(25);
+    const plan = computePlan(1000, 800, 5, 24, MAX_OUTPUT_DIM);
+    expect(plan.effectiveN).toBe(24);
     expect(plan.capped).toBe(false);
-    expect(plan.outputWidth).toBe(200 * 25);
-    expect(plan.outputHeight).toBe(160 * 25);
+    expect(plan.outputWidth).toBe(200 * 24);
+    expect(plan.outputHeight).toBe(160 * 24);
   });
 
   test("出力1辺が上限を超えると n を縮小する", () => {
-    // 長辺グリッド 800 × n=25 = 20,000px は上限 16,384px を超える
-    const plan = computePlan(4000, 2000, 5, 25, MAX_OUTPUT_DIM);
+    // 長辺グリッド 800 × n=26 = 20,800px は上限 16,384px を超える
+    const plan = computePlan(4000, 2000, 5, 26, MAX_OUTPUT_DIM);
     expect(plan.capped).toBe(true);
     expect(plan.effectiveN).toBe(Math.floor(MAX_OUTPUT_DIM / 800));
     expect(Math.max(plan.outputWidth, plan.outputHeight)).toBeLessThanOrEqual(
@@ -34,18 +34,18 @@ describe("computePlan", () => {
   });
 
   test("縮小後も n は 1 を下回らない", () => {
-    const plan = computePlan(100000, 100, 1, 25, MOBILE_MAX_OUTPUT_DIM);
+    const plan = computePlan(100000, 100, 1, 24, MOBILE_MAX_OUTPUT_DIM);
     expect(plan.effectiveN).toBe(1);
   });
 
   test("x が入力サイズより大きくてもグリッドは1以上", () => {
-    const plan = computePlan(10, 10, 100, 25, MAX_OUTPUT_DIM);
+    const plan = computePlan(10, 10, 100, 24, MAX_OUTPUT_DIM);
     expect(plan.gridWidth).toBe(1);
     expect(plan.gridHeight).toBe(1);
   });
 
   test("計算に使った上限を返す", () => {
-    expect(computePlan(1000, 800, 5, 25, MOBILE_MAX_OUTPUT_DIM).maxDim).toBe(
+    expect(computePlan(1000, 800, 5, 24, MOBILE_MAX_OUTPUT_DIM).maxDim).toBe(
       MOBILE_MAX_OUTPUT_DIM,
     );
   });
@@ -145,5 +145,21 @@ describe("scaledOutputSize", () => {
     expect(JPEG_RESOLUTION_LIMITS.medium).toBeLessThan(
       JPEG_RESOLUTION_LIMITS.high,
     );
+  });
+});
+
+describe("computePlan の偶数保持", () => {
+  test("上限で縮小した n を偶数に切り下げる", () => {
+    // 長辺グリッド 700 なら 16384 / 700 = 23.4 → 切り捨て23 (奇数) → 22
+    const plan = computePlan(3500, 2000, 5, 128, MAX_OUTPUT_DIM);
+    expect(plan.gridWidth).toBe(700);
+    expect(plan.effectiveN).toBe(22);
+    expect(plan.effectiveN % 2).toBe(0);
+  });
+
+  test("縮小してもグリッドが巨大なら n = 1 を許す", () => {
+    // 偶数化のために 0 にしてはいけない (出力が消える)
+    const plan = computePlan(100000, 100, 1, 24, MOBILE_MAX_OUTPUT_DIM);
+    expect(plan.effectiveN).toBe(1);
   });
 });

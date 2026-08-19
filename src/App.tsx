@@ -32,9 +32,9 @@ interface Result extends MosaicDone {
 
 const DEFAULT_PARAMS: MosaicParams = {
   x: 5,
-  n: 25,
+  n: 24,
   rotate: true,
-  colorAdjust: 50,
+  colorAdjust: 0,
   // モザイクの素材は写真が中心で、PNG では出力が数百 MB になりうるため JPG を既定にする
   format: "jpeg",
   jpegResolution: "high",

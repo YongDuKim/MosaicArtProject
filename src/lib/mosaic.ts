@@ -58,10 +58,15 @@ export function scaledOutputSize(
   };
 }
 
+/** 偶数へ切り下げる (1 は偶数にできないためそのまま返す) */
+function evenOrBelow(value: number): number {
+  return value <= 1 ? value : value - (value % 2);
+}
+
 /**
  * 出力レイアウトを計算する。
  * grid = 入力サイズ / x、出力 = grid × n (mosaic_art_mk5.py と同じ)。
- * 出力が maxDim を超える場合はタイル解像度 n を自動縮小する。
+ * 出力が maxDim を超える場合はタイル解像度 n を自動縮小する (偶数を保つ)。
  */
 export function computePlan(
   imageWidth: number,
@@ -76,7 +81,9 @@ export function computePlan(
   let effectiveN = n;
   let capped = false;
   if (maxGrid * n > maxDim) {
-    effectiveN = Math.max(1, Math.floor(maxDim / maxGrid));
+    // 縮小後も偶数に保つ。タイル境界が JPEG のクロマ格子 (4:2:0 の2px) と
+    // ずれると色差の圧縮効率が落ちるため
+    effectiveN = Math.max(1, evenOrBelow(Math.floor(maxDim / maxGrid)));
     capped = true;
   }
   return {
@@ -138,7 +145,7 @@ export async function generateMosaic(
   const tileCanvases: OffscreenCanvas[] = [];
   const tilePixels: Uint8ClampedArray[] = [];
   for (const tile of tiles) {
-    // 256px のタイルを n (既定25) へ縮小する。縮小率が大きいので段階的に縮める
+    // 256px のタイルを n (既定24) へ縮小する。縮小率が大きいので段階的に縮める
     const canvas = drawDownscaled(
       tile.bitmap,
       { x: 0, y: 0, width: tile.bitmap.width, height: tile.bitmap.height },

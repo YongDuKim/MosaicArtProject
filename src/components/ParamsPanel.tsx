@@ -56,12 +56,16 @@ export default function ParamsPanel({
       <label className="param-row">
         <span>
           タイル解像度 <code>n = {params.n}</code>
-          <small>タイル1枚の出力ピクセル数 (大きいほど拡大時に鮮明)</small>
+          <small>
+            タイル1枚の出力ピクセル数 (大きいほど拡大時に鮮明)。奇数は JPG
+            が約1割重くなるため偶数のみ
+          </small>
         </span>
         <input
           type="range"
           min={8}
           max={128}
+          step={2}
           value={params.n}
           disabled={generating}
           onChange={(e) => onChange({ ...params, n: Number(e.target.value) })}
