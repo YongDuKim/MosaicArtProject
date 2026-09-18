@@ -35,6 +35,7 @@ const DEFAULT_PARAMS: MosaicParams = {
   n: 24,
   rotate: true,
   colorAdjust: 0,
+  colorTolerance: 10,
   // モザイクの素材は写真が中心で、PNG では出力が数百 MB になりうるため JPG を既定にする
   format: "jpeg",
   jpegResolution: "high",
@@ -328,6 +329,7 @@ export default function App() {
         n: plan.effectiveN,
         rotate: params.rotate,
         colorAdjust: params.colorAdjust / 100,
+        colorTolerance: params.colorTolerance,
         format: params.format,
         jpegResolution: params.jpegResolution,
       };

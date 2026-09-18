@@ -74,6 +74,27 @@ export default function ParamsPanel({
 
       <label className="param-row">
         <span>
+          タイルのばらつき <code>{params.colorTolerance}</code>
+          <small>
+            最も近い色のタイルとの色差がこの値以内のタイルからランダムに選ぶ
+            (0で常に最も近い1枚)。大きいほど多くの種類が使われる
+          </small>
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={50}
+          step={1}
+          value={params.colorTolerance}
+          disabled={generating}
+          onChange={(e) =>
+            onChange({ ...params, colorTolerance: Number(e.target.value) })
+          }
+        />
+      </label>
+
+      <label className="param-row">
+        <span>
           色補正 <code>{params.colorAdjust}%</code>
           <small>元画像の色にどれだけ近づけるか (0で補正なし)</small>
         </span>
