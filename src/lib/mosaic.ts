@@ -4,7 +4,7 @@ import type {
   MosaicPlan,
   WorkerRequest,
 } from "./types";
-import { findClosestColorIndex } from "./colorUtils";
+import { pickTileIndex } from "./colorUtils";
 import { JPEG_QUALITY, extensionForMimeType, mimeForFormat } from "./format";
 import { drawDownscaled } from "./resize";
 
@@ -127,6 +127,7 @@ export async function generateMosaic(
     n,
     rotate,
     colorAdjust,
+    colorTolerance,
     format,
     jpegResolution,
   } = req;
@@ -180,11 +181,13 @@ export async function generateMosaic(
   for (let gy = 0; gy < gridHeight; gy++) {
     for (let gx = 0; gx < gridWidth; gx++) {
       const i = (gy * gridWidth + gx) * 4;
-      const tileIndex = findClosestColorIndex(
+      // 色が近いタイルが多数あるとき1枚に集中しないよう、許容範囲内からランダムに選ぶ
+      const tileIndex = pickTileIndex(
         cellData[i],
         cellData[i + 1],
         cellData[i + 2],
         avgColors,
+        colorTolerance,
       );
       counts[tileIndex]++;
       assignments[gy * gridWidth + gx] = tileIndex;

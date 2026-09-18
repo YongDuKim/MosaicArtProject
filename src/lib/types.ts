@@ -26,6 +26,11 @@ export interface MosaicParams {
   rotate: boolean;
   /** 色補正の強さ (0-100%)。セル目標色との差分をタイル全ピクセルに加算し、ディテールを保ったまま色味を近づける */
   colorAdjust: number;
+  /**
+   * タイルのばらつき (RGB ユークリッド距離, 0-50)。最近傍タイルとの色差がこの値以内の
+   * タイルを候補にしてランダムに1枚選ぶ。0 なら常に最近傍を使う
+   */
+  colorTolerance: number;
   /** 出力画像の形式 */
   format: OutputFormat;
   /** JPG の書き出し解像度 (PNG では使わない) */
@@ -69,6 +74,8 @@ export interface WorkerRequest {
   rotate: boolean;
   /** 色補正の強さ (0-1)。ディテール保持型の色シフトに使う */
   colorAdjust: number;
+  /** タイルのばらつき (RGB ユークリッド距離)。候補集合の広さ */
+  colorTolerance: number;
   format: OutputFormat;
   jpegResolution: JpegResolution;
 }

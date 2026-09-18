@@ -48,3 +48,48 @@ export function findClosestColorIndex(
   }
   return best;
 }
+
+/**
+ * 最近傍タイルとの RGB ユークリッド距離の差が tolerance 以内に収まる
+ * タイルのインデックスをすべて返す (最近傍自身を必ず含む)。
+ * 色が近いタイルが多数あるとき、常に同じ1枚に集中させずに散らすための候補集合。
+ */
+export function findSimilarColorIndices(
+  r: number,
+  g: number,
+  b: number,
+  avgColors: [number, number, number][],
+  tolerance: number,
+): number[] {
+  const closest = findClosestColorIndex(r, g, b, avgColors);
+  const [cr, cg, cb] = avgColors[closest];
+  const closestDistance = Math.sqrt(
+    (r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2,
+  );
+  const limit = (closestDistance + tolerance) ** 2;
+  const candidates: number[] = [];
+  for (let i = 0; i < avgColors.length; i++) {
+    const [tr, tg, tb] = avgColors[i];
+    const d = (r - tr) ** 2 + (g - tg) ** 2 + (b - tb) ** 2;
+    if (d <= limit) candidates.push(i);
+  }
+  return candidates;
+}
+
+/**
+ * セルに貼るタイルを選ぶ。tolerance が 0 なら最近傍を返し、
+ * 正なら最近傍との色差が tolerance 以内の候補から一様ランダムに1枚選ぶ。
+ * random はテストで固定できるように注入する (0 以上 1 未満を返すこと)。
+ */
+export function pickTileIndex(
+  r: number,
+  g: number,
+  b: number,
+  avgColors: [number, number, number][],
+  tolerance: number,
+  random: () => number = Math.random,
+): number {
+  if (tolerance <= 0) return findClosestColorIndex(r, g, b, avgColors);
+  const candidates = findSimilarColorIndices(r, g, b, avgColors, tolerance);
+  return candidates[Math.floor(random() * candidates.length)];
+}
