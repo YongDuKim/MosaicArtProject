@@ -6,6 +6,7 @@ import type {
 } from "../lib/types";
 import { JPEG_RESOLUTION_LIMITS, scaledOutputSize } from "../lib/mosaic";
 import { COLOR_COMPARISONS } from "../lib/colorComparison";
+import { MODE_ORDER, MOSAIC_MODES } from "../lib/mosaicModes";
 
 const RESOLUTIONS: { value: JpegResolution; label: string }[] = [
   { value: "low", label: "低" },
@@ -25,6 +26,9 @@ interface Props {
   canGenerate: boolean;
   generating: boolean;
   onGenerate: () => void;
+  onCompare: () => void;
+  analyzing: boolean;
+  limitedPalette: boolean;
 }
 
 export default function ParamsPanel({
@@ -34,12 +38,34 @@ export default function ParamsPanel({
   canGenerate,
   generating,
   onGenerate,
+  onCompare,
+  analyzing,
+  limitedPalette,
 }: Props) {
   const comparison = COLOR_COMPARISONS[params.colorComparison];
   const tolerance = params.colorTolerance[params.colorComparison];
   return (
     <div className="params card">
       <h2>パラメータ</h2>
+
+      <fieldset className="param-format param-modes" disabled={generating}>
+        <legend>仕上がり</legend>
+        {MODE_ORDER.map((mode) => (
+          <label key={mode}>
+            <input
+              type="radio"
+              name="mosaic-mode"
+              value={mode}
+              checked={params.mode === mode}
+              onChange={() => onChange({ ...params, mode })}
+            />
+            <span>
+              {MOSAIC_MODES[mode].label}
+              <small>{MOSAIC_MODES[mode].hint}</small>
+            </span>
+          </label>
+        ))}
+      </fieldset>
 
       <label className="param-row">
         <span>
@@ -101,9 +127,10 @@ export default function ParamsPanel({
         <span>
           タイルのばらつき <code>{tolerance.toFixed(comparison.decimals)}</code>
           <small>
-            元画像の色への距離が、最小距離＋この値以内の候補からランダムに選ぶ
-            (0で常に最も近い1枚)。{comparison.label}{" "}
-            の尺度で調整し、方式ごとに値を保持する
+            {params.mode === "color"
+              ? "元画像の色への距離が、最小距離＋この値以内の候補からランダムに選ぶ (0で最も近い1枚)。"
+              : "目標色と周囲の明暗・色味の関係を評価し、近い評価の候補からランダムに選ぶ (0で最良の1枚)。"}
+            {comparison.label} の尺度で調整し、方式ごとに値を保持する
           </small>
         </span>
         <input
@@ -127,8 +154,10 @@ export default function ParamsPanel({
 
       <label className="param-row">
         <span>
-          色補正 <code>{params.colorAdjust}%</code>
-          <small>元画像の色にどれだけ近づけるか (0で補正なし)</small>
+          タイル写真の色補正 <code>{params.colorAdjust}%</code>
+          <small>
+            写真の色を、仕上がりのモードで決めた目標色に近づける強さ。0%なら写真の色は変えず、配色と配置で表現します
+          </small>
         </span>
         <input
           type="range"
@@ -230,6 +259,12 @@ export default function ParamsPanel({
         </div>
       )}
 
+      {analyzing && <p role="status">画像と素材の配色を解析中…</p>}
+      {limitedPalette && (
+        <p className="warning">
+          素材の明暗と色味の幅が狭いため、形を優先しても輪郭や陰影を十分に表せない場合があります。
+        </p>
+      )}
       <button
         type="button"
         className="generate-button"
@@ -238,6 +273,17 @@ export default function ParamsPanel({
       >
         {generating ? "生成中…" : "モザイクアートを生成"}
       </button>
+      <button
+        type="button"
+        className="compare-button"
+        disabled={!canGenerate || generating}
+        onClick={onCompare}
+      >
+        3モードを比較
+      </button>
+      <p className="param-help">
+        同じ条件で3つの結果を生成し、切り替えて比較できます。違いを見るときは、色補正とばらつきを0、回転をOFFにしてください。
+      </p>
     </div>
   );
 }

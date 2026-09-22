@@ -58,6 +58,24 @@ export function srgbToOklab(r: number, g: number, b: number): OklabColor {
   };
 }
 
+/** Oklab の公式逆変換。描画用 sRGB へ戻し、色域外の成分は 0〜255 に収める。 */
+export function oklabToSrgb({ L, a, b }: OklabColor): [number, number, number] {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  const encode = (v: number) =>
+    255 *
+    Math.max(
+      0,
+      Math.min(1, v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055),
+    );
+  return [
+    encode(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+    encode(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    encode(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
+  ];
+}
+
 /**
  * タイルの比較色を生成ごとに準備する。返す関数はセルの代表 RGB 色を受け取る。
  * Oklab はタイルごとに準備時1回、セルごとに選択時1回だけ変換する。

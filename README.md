@@ -41,7 +41,7 @@ npm test         # vitest
 
 ## アルゴリズム
 
-[アルゴリズム解説](docs/internal/algorithm.md)を参照してください。RGB／Oklab の色比較とばらつきの操作は[使い方](docs/user/usage.md#色比較とばらつき)で説明しています。
+[アルゴリズム解説](docs/internal/algorithm.md)を参照してください。仕上がりの3モード、比較プレビュー、写真の色補正、RGB／Oklab の色比較とばらつきの操作は[使い方](docs/user/usage.md)で説明しています。
 
 ## 構成
 
