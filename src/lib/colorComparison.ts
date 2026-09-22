@@ -11,7 +11,7 @@ export interface OklabColor {
 /** ばらつきは各方式の距離をそのまま表示する。方式間の換算は行わない */
 export const COLOR_COMPARISONS = {
   rgb: {
-    label: "RGB（従来）",
+    label: "RGB",
     hint: "RGB の数値の近さで選ぶ",
     max: 50,
     step: 1,
