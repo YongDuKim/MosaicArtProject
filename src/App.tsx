@@ -10,6 +10,7 @@ import type {
   WorkerResponse,
 } from "./lib/types";
 import { computePlan } from "./lib/mosaic";
+import { COLOR_COMPARISONS } from "./lib/colorComparison";
 import { loadTiles, tileKey } from "./lib/tiles";
 import { decodeImageBitmap } from "./lib/decode";
 import ImageUploader from "./components/ImageUploader";
@@ -35,7 +36,11 @@ const DEFAULT_PARAMS: MosaicParams = {
   n: 24,
   rotate: true,
   colorAdjust: 0,
-  colorTolerance: 10,
+  colorComparison: "rgb",
+  colorTolerance: {
+    rgb: COLOR_COMPARISONS.rgb.defaultTolerance,
+    oklab: COLOR_COMPARISONS.oklab.defaultTolerance,
+  },
   // モザイクの素材は写真が中心で、PNG では出力が数百 MB になりうるため JPG を既定にする
   format: "jpeg",
   jpegResolution: "high",
@@ -329,7 +334,8 @@ export default function App() {
         n: plan.effectiveN,
         rotate: params.rotate,
         colorAdjust: params.colorAdjust / 100,
-        colorTolerance: params.colorTolerance,
+        colorComparison: params.colorComparison,
+        colorTolerance: params.colorTolerance[params.colorComparison],
         format: params.format,
         jpegResolution: params.jpegResolution,
       };

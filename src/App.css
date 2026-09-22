@@ -280,6 +280,10 @@
   accent-color: var(--accent);
 }
 
+.param-color-comparison small {
+  display: block;
+}
+
 .param-check {
   display: flex;
   align-items: center;

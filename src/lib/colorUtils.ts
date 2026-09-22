@@ -29,7 +29,10 @@ export function averageColorOfBitmap(
   ];
 }
 
-/** RGB二乗距離が最小のタイルのインデックスを返す */
+/**
+ * 同じ色空間の3成分を比較し、二乗距離が最小のインデックスを返す。
+ * RGB では R/G/B、Oklab では L/a/b を渡す。同距離なら先の候補を優先する
+ */
 export function findClosestColorIndex(
   r: number,
   g: number,
@@ -50,8 +53,8 @@ export function findClosestColorIndex(
 }
 
 /**
- * 最近傍タイルとの RGB ユークリッド距離の差が tolerance 以内に収まる
- * タイルのインデックスをすべて返す (最近傍自身を必ず含む)。
+ * 目標色へのユークリッド距離が最小距離 + tolerance 以内の
+ * インデックスを元の順序で返す。成分と tolerance は同じ色空間の尺度で指定する。
  * 色が近いタイルが多数あるとき、常に同じ1枚に集中させずに散らすための候補集合。
  */
 export function findSimilarColorIndices(
@@ -78,7 +81,7 @@ export function findSimilarColorIndices(
 
 /**
  * セルに貼るタイルを選ぶ。tolerance が 0 なら最近傍を返し、
- * 正なら最近傍との色差が tolerance 以内の候補から一様ランダムに1枚選ぶ。
+ * 正なら目標色への距離が最小距離 + tolerance 以内の候補から一様ランダムに1枚選ぶ。
  * random はテストで固定できるように注入する (0 以上 1 未満を返すこと)。
  */
 export function pickTileIndex(

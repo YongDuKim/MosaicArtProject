@@ -5,6 +5,7 @@ import type {
   OutputFormat,
 } from "../lib/types";
 import { JPEG_RESOLUTION_LIMITS, scaledOutputSize } from "../lib/mosaic";
+import { COLOR_COMPARISONS } from "../lib/colorComparison";
 
 const RESOLUTIONS: { value: JpegResolution; label: string }[] = [
   { value: "low", label: "低" },
@@ -34,6 +35,8 @@ export default function ParamsPanel({
   generating,
   onGenerate,
 }: Props) {
+  const comparison = COLOR_COMPARISONS[params.colorComparison];
+  const tolerance = params.colorTolerance[params.colorComparison];
   return (
     <div className="params card">
       <h2>パラメータ</h2>
@@ -72,23 +75,52 @@ export default function ParamsPanel({
         />
       </label>
 
+      <fieldset
+        className="param-format param-color-comparison"
+        disabled={generating}
+      >
+        <legend>タイルの色比較方式</legend>
+        {(["rgb", "oklab"] as const).map((value) => (
+          <label key={value}>
+            <input
+              type="radio"
+              name="color-comparison"
+              value={value}
+              checked={params.colorComparison === value}
+              onChange={() => onChange({ ...params, colorComparison: value })}
+            />
+            <span>
+              {COLOR_COMPARISONS[value].label}
+              <small>{COLOR_COMPARISONS[value].hint}</small>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
       <label className="param-row">
         <span>
-          タイルのばらつき <code>{params.colorTolerance}</code>
+          タイルのばらつき <code>{tolerance.toFixed(comparison.decimals)}</code>
           <small>
-            最も近い色のタイルとの色差がこの値以内のタイルからランダムに選ぶ
-            (0で常に最も近い1枚)。大きいほど多くの種類が使われる
+            元画像の色への距離が、最小距離＋この値以内の候補からランダムに選ぶ
+            (0で常に最も近い1枚)。{comparison.label}{" "}
+            の尺度で調整し、方式ごとに値を保持する
           </small>
         </span>
         <input
           type="range"
           min={0}
-          max={50}
-          step={1}
-          value={params.colorTolerance}
+          max={comparison.max}
+          step={comparison.step}
+          value={tolerance}
           disabled={generating}
           onChange={(e) =>
-            onChange({ ...params, colorTolerance: Number(e.target.value) })
+            onChange({
+              ...params,
+              colorTolerance: {
+                ...params.colorTolerance,
+                [params.colorComparison]: Number(e.target.value),
+              },
+            })
           }
         />
       </label>
