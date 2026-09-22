@@ -17,6 +17,7 @@
 - `src/lib/tiles.ts` — アップロードされたタイルの読み込みと平均色の事前計算
 - `src/lib/decode.ts` — 画像の共通デコード。HEIC/HEIF はブラウザ内 (heic-to) で変換する
 - `src/lib/resize.ts` — 画像縮小の共通処理 (段階的縮小)
+- `src/lib/colorComparison.ts` — 色比較方式の設定・sRGB → Oklab 変換・タイル比較色の準備
 - `src/lib/colorUtils.ts` / `format.ts` / `types.ts` — 色計算・表示フォーマット・共有型
 - `src/workers/mosaicWorker.ts` — 生成処理を行う Web Worker
 - `src/workers/tileWorker.ts` — タイルのデコードを行う Web Worker

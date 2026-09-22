@@ -1,3 +1,6 @@
+/** タイル選択で使う色比較方式。仕上がりの評価方針とは独立した設定 */
+export type ColorComparison = "rgb" | "oklab";
+
 /** タイル画像1枚の情報 (bitmap はセンタークロップ・縮小済みの正方形) */
 export interface TileInfo {
   name: string;
@@ -26,11 +29,12 @@ export interface MosaicParams {
   rotate: boolean;
   /** 色補正の強さ (0-100%)。セル目標色との差分をタイル全ピクセルに加算し、ディテールを保ったまま色味を近づける */
   colorAdjust: number;
+  colorComparison: ColorComparison;
   /**
-   * タイルのばらつき (RGB ユークリッド距離, 0-50)。最近傍タイルとの色差がこの値以内の
-   * タイルを候補にしてランダムに1枚選ぶ。0 なら常に最近傍を使う
+   * 方式ごとのばらつき。目標セルへの距離が最小距離 + この値以内の候補から選ぶ。
+   * 各方式のユークリッド距離で指定し、切り替えてもそれぞれの調整値を保持する
    */
-  colorTolerance: number;
+  colorTolerance: Record<ColorComparison, number>;
   /** 出力画像の形式 */
   format: OutputFormat;
   /** JPG の書き出し解像度 (PNG では使わない) */
@@ -74,7 +78,8 @@ export interface WorkerRequest {
   rotate: boolean;
   /** 色補正の強さ (0-1)。ディテール保持型の色シフトに使う */
   colorAdjust: number;
-  /** タイルのばらつき (RGB ユークリッド距離)。候補集合の広さ */
+  colorComparison: ColorComparison;
+  /** 選択した方式のユークリッド距離で表す許容差。0 なら乱数を使わず最近傍を選ぶ */
   colorTolerance: number;
   format: OutputFormat;
   jpegResolution: JpegResolution;

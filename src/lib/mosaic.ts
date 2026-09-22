@@ -4,7 +4,7 @@ import type {
   MosaicPlan,
   WorkerRequest,
 } from "./types";
-import { pickTileIndex } from "./colorUtils";
+import { prepareTilePicker } from "./colorComparison";
 import { JPEG_QUALITY, extensionForMimeType, mimeForFormat } from "./format";
 import { drawDownscaled } from "./resize";
 
@@ -127,6 +127,7 @@ export async function generateMosaic(
     n,
     rotate,
     colorAdjust,
+    colorComparison,
     colorTolerance,
     format,
     jpegResolution,
@@ -163,6 +164,7 @@ export async function generateMosaic(
     tile.bitmap.close();
   }
   const avgColors = tiles.map((tile) => tile.avgColor);
+  const pickTile = prepareTilePicker(avgColors, colorComparison);
 
   // 色シフト後のタイルを描画するための使い回しスクラッチ
   const scratch = new OffscreenCanvas(n, n);
@@ -182,11 +184,10 @@ export async function generateMosaic(
     for (let gx = 0; gx < gridWidth; gx++) {
       const i = (gy * gridWidth + gx) * 4;
       // 色が近いタイルが多数あるとき1枚に集中しないよう、許容範囲内からランダムに選ぶ
-      const tileIndex = pickTileIndex(
+      const tileIndex = pickTile(
         cellData[i],
         cellData[i + 1],
         cellData[i + 2],
-        avgColors,
         colorTolerance,
       );
       counts[tileIndex]++;
