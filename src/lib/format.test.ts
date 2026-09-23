@@ -42,6 +42,7 @@ describe("formatTimestamp", () => {
 describe("buildStatsText", () => {
   const result: MosaicDone = {
     type: "done",
+    mode: "color",
     blob: new Blob(),
     stats: [
       { name: "a.jpg", index: 0, count: 3, percentage: 75 },

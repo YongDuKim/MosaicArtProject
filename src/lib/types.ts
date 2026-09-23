@@ -1,5 +1,6 @@
 /** タイル選択で使う色比較方式。仕上がりの評価方針とは独立した設定 */
 export type ColorComparison = "rgb" | "oklab";
+export type MosaicMode = "color" | "balanced" | "structure";
 
 /** タイル画像1枚の情報 (bitmap はセンタークロップ・縮小済みの正方形) */
 export interface TileInfo {
@@ -21,6 +22,7 @@ export type JpegResolution = "low" | "medium" | "high";
 
 /** 生成パラメータ */
 export interface MosaicParams {
+  mode: MosaicMode;
   /** グリッド解像度: 入力画像の辺をこの値で割った数がグリッド数になる (小さいほど細かい) */
   x: number;
   /** タイル1枚の出力ピクセルサイズ */
@@ -31,8 +33,8 @@ export interface MosaicParams {
   colorAdjust: number;
   colorComparison: ColorComparison;
   /**
-   * 方式ごとのばらつき。目標セルへの距離が最小距離 + この値以内の候補から選ぶ。
-   * 各方式のユークリッド距離で指定し、切り替えてもそれぞれの調整値を保持する
+   * 方式ごとのばらつき。色優先は元色への距離、他モードは周囲との関係を含む
+   * 評価値の許容差。方式を切り替えてもそれぞれの調整値を保持する
    */
   colorTolerance: Record<ColorComparison, number>;
   /** 出力画像の形式 */
@@ -66,28 +68,40 @@ export interface MosaicPlan {
 
 /** Worker へのリクエスト */
 export interface WorkerRequest {
-  input: ImageBitmap;
+  type: "generate";
+  analysisId: number;
+  mode: MosaicMode;
+  /** 3モードの比較では同じ乱数列を使う。通常生成では省略する。 */
+  seed?: number;
   tiles: {
     name: string;
     avgColor: [number, number, number];
     bitmap: ImageBitmap;
   }[];
-  gridWidth: number;
-  gridHeight: number;
   n: number;
   rotate: boolean;
   /** 色補正の強さ (0-1)。ディテール保持型の色シフトに使う */
   colorAdjust: number;
   colorComparison: ColorComparison;
-  /** 選択した方式のユークリッド距離で表す許容差。0 なら乱数を使わず最近傍を選ぶ */
+  /** 選択した方式の尺度で表す許容差。0 なら乱数を使わず最良の候補を選ぶ */
   colorTolerance: number;
   format: OutputFormat;
   jpegResolution: JpegResolution;
 }
 
+export interface AnalysisRequest {
+  type: "analyze";
+  analysisId: number;
+  input: ImageBitmap;
+  tileColors: [number, number, number][];
+  gridWidth: number;
+  gridHeight: number;
+}
+
 /** 生成完了時のデータ */
 export interface MosaicDone {
   type: "done";
+  mode: MosaicMode;
   blob: Blob;
   stats: UsageStat[];
   /** タイル名 (assignments のインデックスに対応) */
@@ -108,6 +122,7 @@ export interface MosaicDone {
 /** Worker からのレスポンス */
 export type WorkerResponse =
   | { type: "progress"; percent: number; label?: string }
+  | { type: "analyzed"; analysisId: number; limitedPalette: boolean }
   | MosaicDone
   | { type: "error"; message: string };
 

@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import type {
-  MosaicDone,
   MosaicParams,
   TileInfo,
   TileWorkerRequest,
   TileWorkerResponse,
-  WorkerRequest,
-  WorkerResponse,
 } from "./lib/types";
 import { computePlan } from "./lib/mosaic";
 import { COLOR_COMPARISONS } from "./lib/colorComparison";
+import { useMosaicGeneration } from "./lib/useMosaicGeneration";
+import { MOSAIC_MODES } from "./lib/mosaicModes";
 import { loadTiles, tileKey } from "./lib/tiles";
 import { decodeImageBitmap } from "./lib/decode";
 import ImageUploader from "./components/ImageUploader";
@@ -26,12 +25,8 @@ interface InputImage {
   url: string;
 }
 
-interface Result extends MosaicDone {
-  url: string;
-  inputName: string;
-}
-
 const DEFAULT_PARAMS: MosaicParams = {
+  mode: "color",
   x: 5,
   n: 24,
   rotate: true,
@@ -68,14 +63,6 @@ function tileConcurrency(): number {
   return Math.min(4, nav.hardwareConcurrency || 4);
 }
 
-/** 生成失敗時のメッセージ。WebKit の canvas 上限超過エラーには対処法を添える */
-function describeGenerateError(message: string): string {
-  if (/invalid state|out of memory/i.test(message)) {
-    return `生成に失敗しました: ${message} — 端末のメモリまたはキャンバス上限を超えた可能性があります。グリッド解像度 x を大きくするか、タイル解像度 n を小さくしてお試しください。`;
-  }
-  return `生成に失敗しました: ${message}`;
-}
-
 export default function App() {
   const [tiles, setTiles] = useState<TileInfo[] | null>(null);
   const [tilesMeta, setTilesMeta] = useState<TilesMeta | null>(null);
@@ -84,21 +71,16 @@ export default function App() {
     total: number;
   } | null>(null);
   const [input, setInput] = useState<InputImage | null>(null);
+  const [inputLoading, setInputLoading] = useState(false);
   const [params, setParams] = useState<MosaicParams>(DEFAULT_PARAMS);
-  const [generating, setGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [progressLabel, setProgressLabel] = useState<string | null>(null);
-  const [result, setResult] = useState<Result | null>(null);
   const [selectedTile, setSelectedTile] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const workerRef = useRef<Worker | null>(null);
   const tileWorkerRef = useRef<Worker | null>(null);
   /** ストリーミング中のタイル置き場。1枚ごとの再レンダリングを避けるため ref に溜める */
   const pendingTilesRef = useRef<TileInfo[]>([]);
 
   useEffect(
     () => () => {
-      workerRef.current?.terminate();
       tileWorkerRef.current?.terminate();
     },
     [],
@@ -123,19 +105,36 @@ export default function App() {
     [input, params.x, params.n],
   );
 
+  const generation = useMosaicGeneration(
+    input,
+    tiles,
+    plan,
+    params,
+    !!tileLoading || inputLoading,
+  );
+  const { generating, result, progress, progressLabel } = generation;
+  useEffect(() => setSelectedTile(null), [result]);
+
+  useEffect(
+    () => () => {
+      if (input) {
+        URL.revokeObjectURL(input.url);
+        input.bitmap.close();
+      }
+    },
+    [input],
+  );
+
   const handleSelect = async (file: File) => {
+    setInputLoading(true);
     try {
       const bitmap = await decodeImageBitmap(file);
-      setInput((prev) => {
-        if (prev) {
-          URL.revokeObjectURL(prev.url);
-          prev.bitmap.close();
-        }
-        return { file, bitmap, url: URL.createObjectURL(file) };
-      });
+      setInput({ file, bitmap, url: URL.createObjectURL(file) });
       setError(null);
     } catch {
       setError("画像を読み込めませんでした。別のファイルを試してください。");
+    } finally {
+      setInputLoading(false);
     }
   };
 
@@ -274,80 +273,6 @@ export default function App() {
     setTilesMeta(null);
   };
 
-  const handleGenerate = async () => {
-    if (!tiles || !input || !plan || generating || tileLoading) return;
-    setGenerating(true);
-    setProgress(0);
-    setProgressLabel(null);
-    setError(null);
-
-    if (!workerRef.current) {
-      workerRef.current = new Worker(
-        new URL("./workers/mosaicWorker.ts", import.meta.url),
-        {
-          type: "module",
-        },
-      );
-    }
-    const worker = workerRef.current;
-    const inputName = input.file.name;
-
-    worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-      const msg = event.data;
-      if (msg.type === "progress") {
-        setProgress(msg.percent);
-        setProgressLabel(msg.label ?? null);
-      } else if (msg.type === "done") {
-        setResult((prev) => {
-          if (prev) URL.revokeObjectURL(prev.url);
-          return { ...msg, url: URL.createObjectURL(msg.blob), inputName };
-        });
-        setSelectedTile(null);
-        setGenerating(false);
-      } else {
-        setError(describeGenerateError(msg.message));
-        setGenerating(false);
-      }
-    };
-    worker.onerror = (event) => {
-      setError(describeGenerateError(event.message));
-      setGenerating(false);
-    };
-
-    try {
-      // iOS の WebKit は ImageBitmap を structured clone で Worker に渡すと中身が
-      // 空になる不具合があるため、使い捨てのコピーを作って transfer で渡す。
-      // 元の bitmap は手元に残るので、再生成にも影響しない。
-      const inputCopy = await createImageBitmap(input.bitmap);
-      const tileCopies = await Promise.all(
-        tiles.map((t) => createImageBitmap(t.bitmap)),
-      );
-      const request: WorkerRequest = {
-        input: inputCopy,
-        tiles: tiles.map((t, i) => ({
-          name: t.name,
-          avgColor: t.avgColor,
-          bitmap: tileCopies[i],
-        })),
-        gridWidth: plan.gridWidth,
-        gridHeight: plan.gridHeight,
-        n: plan.effectiveN,
-        rotate: params.rotate,
-        colorAdjust: params.colorAdjust / 100,
-        colorComparison: params.colorComparison,
-        colorTolerance: params.colorTolerance[params.colorComparison],
-        format: params.format,
-        jpegResolution: params.jpegResolution,
-      };
-      worker.postMessage(request, [inputCopy, ...tileCopies]);
-    } catch (err) {
-      setError(
-        describeGenerateError(err instanceof Error ? err.message : String(err)),
-      );
-      setGenerating(false);
-    }
-  };
-
   return (
     <main className="app">
       <header className="app-header">
@@ -358,14 +283,18 @@ export default function App() {
         </p>
       </header>
 
-      {error && <p className="error">{error}</p>}
+      {(error || generation.error) && (
+        <p className="error" role="alert">
+          {error || generation.error}
+        </p>
+      )}
 
       <div className="input-row">
         <ImageUploader
           onSelect={handleSelect}
           previewUrl={input?.url ?? null}
           fileName={input?.file.name ?? null}
-          disabled={generating}
+          disabled={generating || inputLoading}
         />
         <TileSetPanel
           tileCount={tiles?.length ?? 0}
@@ -379,9 +308,12 @@ export default function App() {
           params={params}
           onChange={setParams}
           plan={plan}
-          canGenerate={!!input && !!tiles && !tileLoading}
+          canGenerate={generation.ready && !tileLoading && !inputLoading}
           generating={generating}
-          onGenerate={handleGenerate}
+          onGenerate={() => void generation.generate()}
+          onCompare={() => void generation.generate(true)}
+          analyzing={generation.analyzing}
+          limitedPalette={generation.analysis?.limitedPalette ?? false}
         />
       </div>
 
@@ -389,6 +321,27 @@ export default function App() {
 
       {result && (
         <>
+          {generation.results.length > 1 && (
+            <div
+              className="mode-tabs"
+              role="group"
+              aria-label="比較する生成結果"
+            >
+              {generation.results.map((item) => (
+                <button
+                  type="button"
+                  key={item.mode}
+                  aria-pressed={result.mode === item.mode}
+                  onClick={() => generation.setActiveMode(item.mode)}
+                >
+                  {MOSAIC_MODES[item.mode].label}
+                </button>
+              ))}
+              <p>
+                同じ条件で生成した結果です。切り替えても拡大位置と倍率を保ちます。
+              </p>
+            </div>
+          )}
           <MosaicPreview
             result={result}
             resultUrl={result.url}
